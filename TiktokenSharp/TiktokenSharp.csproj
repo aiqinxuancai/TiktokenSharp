@@ -10,6 +10,7 @@
 	<PackageTags>chatgpt;openai</PackageTags>
 	<Title>TiktokenSharp</Title>
 	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.0</VersionPrefix>
+	<Authors>aiqinxuancai</Authors>
 
   </PropertyGroup>
 	<ItemGroup>
