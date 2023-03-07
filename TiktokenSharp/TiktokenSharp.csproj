@@ -3,6 +3,19 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<Description>This project implements token calculation for OpenAI's gpt-3.5-turbo model, specifically using `cl100k_base` encoding.</Description>
+	<PackageProjectUrl>https://github.com/aiqinxuancai/TiktokenSharp</PackageProjectUrl>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<RepositoryUrl>https://github.com/aiqinxuancai/TiktokenSharp</RepositoryUrl>
+	<PackageTags>chatgpt;openai</PackageTags>
+	<Title>TiktokenSharp</Title>
+	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.0</VersionPrefix>
 
+  </PropertyGroup>
+	<ItemGroup>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 </Project>
