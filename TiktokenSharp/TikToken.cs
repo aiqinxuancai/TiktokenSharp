@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -34,6 +35,16 @@ namespace TiktokenSharp
 
         public TikToken(EncodingSettingModel setting)
         {
+
+
+            if (setting.ExplicitNVocab != null)
+            {
+                Debug.Assert(setting.SpecialTokens.Count + setting.MergeableRanks.Count == setting.ExplicitNVocab);
+                Debug.Assert(setting.MaxTokenValue == setting.ExplicitNVocab - 1);
+            }
+
+
+
             _corePBE = new CoreBPE(setting.MergeableRanks, setting.SpecialTokens, setting.PatStr);
             _setting = setting;
         }
