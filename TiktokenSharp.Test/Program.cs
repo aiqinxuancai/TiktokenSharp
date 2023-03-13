@@ -25,6 +25,29 @@ Console.WriteLine(t1.Count); //35
 
 Console.WriteLine("test clear");
 
+///
+
+
+TikToken tikTokenTextDavinci003 = TikToken.EncodingForModel("text-davinci-003");
+
+var i2 = tikTokenTextDavinci003.Encode("hello world");
+var d2 = tikTokenTextDavinci003.Decode(i2);
+
+Debug.Assert(i2.IsEqualTo(new List<int>() { 31373, 995 }));
+Debug.Assert(tikTokenTextDavinci003.Decode(new List<int>() { 31373, 995 }) == "hello world");
+
+var c2 = tikTokenTextDavinci003.Encode("hello <|endoftext|>", allowedSpecial: "all");
+Debug.Assert(c2.IsEqualTo(new List<int>() { 31373, 220, 50256 }));
+
+var t2 = tikTokenTextDavinci003.Encode("我很抱歉，我不能提供任何非法或不道德的建议。快速赚钱是不容易的，需要耐心、刻苦努力和经验。如果您想增加收入，请考虑增加工作时间、寻找其他业务机会、学习新技能或提高自己的价值等方法。请记住，通过合法而道德的方式来获得收入，才是长期稳定的解决方案。");
+
+Debug.Assert(t2.Count == 257);
+
+Console.WriteLine(t2.Count); //257
+
+Console.WriteLine("test clear");
+
+
 public static class ListExtensions
 {
     public static bool IsEqualTo(this List<int> list1, List<int> list2)

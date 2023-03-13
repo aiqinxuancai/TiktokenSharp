@@ -65,6 +65,9 @@ namespace TiktokenSharp.Model
         /// </summary>
         public string PatStr { get; set; }
 
+
+        public int? ExplicitNVocab { get; set; }
+
         /// <summary>
         /// tiktoken file
         /// </summary>
@@ -72,9 +75,12 @@ namespace TiktokenSharp.Model
 
         public Dictionary<string, int> SpecialTokens { get; set; }
 
-        public int ExplicitNVocab { get; set; }
 
-
+        public int MaxTokenValue { 
+            get {
+                return Math.Max(MergeableRanks.Values.Max(), SpecialTokens.Values.Max());
+            } 
+        }
 
         public EncodingSettingModel() { }
 
@@ -93,35 +99,34 @@ namespace TiktokenSharp.Model
                     case "gpt2":
                         {
                             //TODO
-                            throw new InvalidOperationException();
+                            throw new NotImplementedException();
                         }
                     case "r50k_base":
                         {
                             //TODO
-                            throw new InvalidOperationException(); ;
+                            throw new NotImplementedException(); ;
                         }
                     case "p50k_base":
                         {
-                            //TODO
-                            throw new InvalidOperationException(); ;
+                            return p50k_base();
                         }
                     case "p50k_edit":
                         {
                             //TODO
-                            throw new InvalidOperationException();
+                            throw new NotImplementedException();
                         }
                     case "cl100k_base":
                         {
                             return cl100k_base();
                         }
                     default:
-                        throw new InvalidOperationException();
+                        throw new NotImplementedException();
                 }
 
             }
             else
             {
-                throw new Exception("Unsupported model");
+                throw new NotImplementedException("Unsupported model");
             }
         }
 
@@ -216,6 +221,25 @@ namespace TiktokenSharp.Model
             {
                 Name = "cl100k_base",
                 PatStr = @"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+                MergeableRanks = mergeable_ranks,
+                SpecialTokens = special_tokens
+            };
+        }
+
+
+        private static EncodingSettingModel p50k_base()
+        {
+            //When using the mod for the first time, the pbe file will be downloaded over the network.
+            var mergeable_ranks = LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken");
+            var special_tokens = new Dictionary<string, int>{
+                                    { ENDOFTEXT, 50256}
+                                };
+
+            return new EncodingSettingModel()
+            {
+                Name = "p50k_base",
+                ExplicitNVocab = 50281,
+                PatStr = @"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+",
                 MergeableRanks = mergeable_ranks,
                 SpecialTokens = special_tokens
             };
