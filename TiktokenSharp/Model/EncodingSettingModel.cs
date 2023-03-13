@@ -92,7 +92,10 @@ namespace TiktokenSharp.Model
         /// <returns></returns>
         public static EncodingSettingModel GetEncodingSetting(string modelName)
         {
-            if (MODEL_TO_ENCODING.TryGetValue(modelName, out var encodingName))
+
+            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelName)).Value;
+
+            if (!string.IsNullOrEmpty(encodingName))
             {
                 switch (encodingName)
                 {
