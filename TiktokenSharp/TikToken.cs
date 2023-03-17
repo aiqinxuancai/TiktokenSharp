@@ -18,7 +18,7 @@ namespace TiktokenSharp
         /// <returns></returns>
         public static TikToken EncodingForModel(string modelName)
         {
-            var setting = EncodingSettingModel.GetEncodingSetting(modelName);
+            var setting = EncodingSettingModel.GetEncodingSetting(modelName, PBEFileDirectory);
             return new TikToken(setting);
         }
 
@@ -27,7 +27,6 @@ namespace TiktokenSharp
             var inner = string.Join("|", tokens.Select(Regex.Escape));
             return new Regex($"({inner})");
         }
-
 
         private CoreBPE _corePBE;
 
