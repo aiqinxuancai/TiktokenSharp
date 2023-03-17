@@ -7,7 +7,8 @@ Currently, only `cl100k_base` has been implemented. Other encodings will be adde
 ## Update
 
 ### 1.0.2 20230317
-* add a method to allow for custom storage directory of bpe files.
+* add a method **TikToken.PBEFileDirectory** to allow for custom storage directory of bpe files. the path needs to be set before **TikToken.EncodingForModel()**.
+
 
 ### 1.0.1 20230313
 * p50k_base encoding algorithm that supports the text-davinci-003 model.
