@@ -20,9 +20,6 @@ namespace TiktokenSharp.Services
             get { return _instance.Value; }
         }
 
-        /// <summary>
-        /// 存储PBE文件的目录，默认为 Path.Combine(AppContext.BaseDirectory, "bpe"); 
-        /// </summary>
         public string PBEFileDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "bpe");
 
 

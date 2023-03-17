@@ -3,14 +3,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using TiktokenSharp.Model;
+using TiktokenSharp.Services;
 
 namespace TiktokenSharp
 {
     public class TikToken
     {
+
+        /// <summary>
+        /// You can set this item before EncodingForModel to specify the location for storing and downloading the bpe file. If not set, it defaults to the AppContext.BaseDirectory\bpe directory.
+        /// </summary>
+        public static string PBEFileDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "bpe");
+
         /// <summary>
         /// get encoding
         /// </summary>
@@ -18,7 +26,8 @@ namespace TiktokenSharp
         /// <returns></returns>
         public static TikToken EncodingForModel(string modelName)
         {
-            var setting = EncodingSettingModel.GetEncodingSetting(modelName, PBEFileDirectory);
+            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
+            var setting = EncodingManager.Instance.GetEncodingSetting(modelName);
             return new TikToken(setting);
         }
 
