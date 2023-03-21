@@ -32,6 +32,7 @@ namespace TiktokenSharp.Services
         static Dictionary<string, string> MODEL_TO_ENCODING = new Dictionary<string, string>()
                                                             {
                                                             // chat
+                                                            { "gpt-4", "cl100k_base" },
                                                             { "gpt-3.5-turbo", "cl100k_base" },
                                                             // text
                                                             { "text-davinci-003", "p50k_base" },
@@ -80,10 +81,18 @@ namespace TiktokenSharp.Services
         /// </summary>
         /// <param name="modelName"></param>
         /// <returns></returns>
-        public EncodingSettingModel GetEncodingSetting(string modelName)
+        public EncodingSettingModel GetEncodingSetting(string modelOrEncodingName)
         {
+            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value;
 
-            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelName)).Value;
+            if (string.IsNullOrEmpty(encodingName))
+            {
+                if (MODEL_TO_ENCODING.Any(a => a.Value == modelOrEncodingName))
+                {
+                    //modelOrEncodingName is encoding name
+                    encodingName = modelOrEncodingName;
+                }
+            }
 
             if (!string.IsNullOrEmpty(encodingName))
             {

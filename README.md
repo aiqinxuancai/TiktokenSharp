@@ -6,6 +6,10 @@ Currently, only `cl100k_base` has been implemented. Other encodings will be adde
 
 ## Update
 
+### 1.0.3 20230321
+* **GetEncodingSetting** now supports the model of **gpt-4** and also allows for encoding names to be directly passed in.
+
+
 ### 1.0.2 20230317
 * add a method **TikToken.PBEFileDirectory** to allow for custom storage directory of bpe files. the path needs to be set before **TikToken.EncodingForModel()**.
 
