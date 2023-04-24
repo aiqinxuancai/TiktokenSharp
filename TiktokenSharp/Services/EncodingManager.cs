@@ -77,9 +77,9 @@ namespace TiktokenSharp.Services
         }
 
         /// <summary>
-        /// modelName
+        /// Get encoding setting with model name.
         /// </summary>
-        /// <param name="modelName"></param>
+        /// <param name="modelName">gpt-4 gpt-3.5-turbo ...</param>
         /// <returns></returns>
         public EncodingSettingModel GetEncodingSetting(string modelOrEncodingName)
         {
@@ -94,6 +94,17 @@ namespace TiktokenSharp.Services
                 }
             }
 
+            return GetEncoding(encodingName);
+        }
+
+
+        /// <summary>
+        /// Get encoding setting with encoding name.
+        /// </summary>
+        /// <param name="encodingName">cl100k_base p50k_base ...</param>
+        /// <returns></returns>
+        public EncodingSettingModel GetEncoding(string encodingName)
+        {
             if (!string.IsNullOrEmpty(encodingName))
             {
                 switch (encodingName)
@@ -131,6 +142,7 @@ namespace TiktokenSharp.Services
                 throw new NotImplementedException("Unsupported model");
             }
         }
+
 
         private Dictionary<byte[], int> LoadTikTokenBpeFromLocal(string tikTokenBpeFile)
         {

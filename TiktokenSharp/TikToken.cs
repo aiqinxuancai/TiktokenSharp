@@ -20,7 +20,7 @@ namespace TiktokenSharp
         public static string PBEFileDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "bpe");
 
         /// <summary>
-        /// get encoding
+        /// get encoding with modelName
         /// </summary>
         /// <param name="modelName">gpt-3.5-turbo</param>
         /// <returns></returns>
@@ -30,6 +30,21 @@ namespace TiktokenSharp
             var setting = EncodingManager.Instance.GetEncodingSetting(modelName);
             return new TikToken(setting);
         }
+
+        /// <summary>
+        /// get encoding with encoding name
+        /// </summary>
+        /// <param name="encodingName">cl100k_base</param>
+        /// <returns></returns>
+        public static TikToken GetEncoding(string encodingName)
+        {
+            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
+            var setting = EncodingManager.Instance.GetEncodingSetting(encodingName);
+            return new TikToken(setting);
+        }
+
+        
+
 
         public static Regex SpecialTokenRegex(HashSet<string> tokens)
         {
