@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	<LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
 	<Description>This project implements token calculation for OpenAI's gpt-3.5-turbo model, specifically using `cl100k_base` encoding.</Description>
 	<PackageProjectUrl>https://github.com/aiqinxuancai/TiktokenSharp</PackageProjectUrl>
@@ -9,7 +10,7 @@
 	<RepositoryUrl>https://github.com/aiqinxuancai/TiktokenSharp</RepositoryUrl>
 	<PackageTags>chatgpt;openai</PackageTags>
 	<Title>TiktokenSharp</Title>
-	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.4</VersionPrefix>
+	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.5</VersionPrefix>
 	<Authors>aiqinxuancai</Authors>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 
@@ -23,5 +24,12 @@
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="IndexRange" Version="1.0.2" />
+	  <PackageReference Include="TA.System.Runtime.CompilerServices.RuntimeHelpers.GetSubArray" Version="1.0.1">
+	    <PrivateAssets>all</PrivateAssets>
+	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
 	</ItemGroup>
 </Project>
