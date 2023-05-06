@@ -4,11 +4,16 @@ Due to the lack of a C# version of `cl100k_base` encoding (gpt-3.5-turbo), I hav
 
 Currently, `cl100k_base` `p50k_base` has been implemented. Other encodings will be added in future submissions. If you encounter any issues or have questions, please feel free to submit them on the `lssues`."
 
+If you want to use the ChatGPT C# library that integrates this repository and implements context-based conversation, please visit [ChatGPTSharp](https://github.com/aiqinxuancai/ChatGPTSharp).
+
 ### Getting Started
 
+TiktokenSharp is available as [NuGet package](https://www.nuget.org/packages/TiktokenSharp/).
+
 ```csharp
-//use model name
 using TiktokenSharp;
+
+//use model name
 TikToken tikToken = TikToken.EncodingForModel("gpt-3.5-turbo");
 var i = tikToken.Encode("hello world"); //[15339, 1917]
 var d = tikToken.Decode(i); //hello world
