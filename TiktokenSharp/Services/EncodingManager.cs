@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using TiktokenSharp.Model;
 using TiktokenSharp.Utils;
@@ -162,36 +163,42 @@ namespace TiktokenSharp.Services
 
         private Dictionary<byte[], int> LoadTikTokenBpe(string tikTokenBpeFile)
         {
-            string localFilePath;
-            if (tikTokenBpeFile.StartsWith("http"))
+            var fileName = Path.GetFileName(tikTokenBpeFile);
+
+            //first load form local.
+            string[] lines = ResourceHelper.GetTiktokenLocalResourceLines(fileName);
+            var bpeDict = new Dictionary<byte[], int>(new ByteArrayComparer());
+            string localFilePath = string.Empty;
+            if (lines.Length == 0)
             {
-                var fileName = Path.GetFileName(tikTokenBpeFile);
-                var saveDir = PBEFileDirectory; //Path.Combine(AppContext.BaseDirectory, "bpe");
-                if (!Directory.Exists(saveDir))
+                if (tikTokenBpeFile.StartsWith("http"))
                 {
-                    Directory.CreateDirectory(saveDir);
-                }
-                localFilePath = Path.Combine(saveDir, fileName);
-                if (!File.Exists(localFilePath))
-                {
-                    using (var client = new WebClient())
+                    var saveDir = PBEFileDirectory; //Path.Combine(AppContext.BaseDirectory, "bpe");
+                    if (!Directory.Exists(saveDir))
                     {
-                        //client.DownloadFile(tikTokenBpeFile, localFilePath);
-                        var data = client.DownloadData(tikTokenBpeFile);
-                        File.WriteAllBytes(localFilePath, data); 
+                        Directory.CreateDirectory(saveDir);
+                    }
+                    localFilePath = Path.Combine(saveDir, fileName);
+                    if (!File.Exists(localFilePath))
+                    {
+                        using (var client = new WebClient())
+                        {
+                            var data = client.DownloadData(tikTokenBpeFile);
+                            File.WriteAllBytes(localFilePath, data);
+                        }
                     }
                 }
-            }
-            else
-            {
-                localFilePath = tikTokenBpeFile;
+                else
+                {
+                    localFilePath = tikTokenBpeFile;
+                }
+
+                lines = File.ReadAllLines(localFilePath, Encoding.UTF8);
             }
 
-            var bpeDict = new Dictionary<byte[], int>(new ByteArrayComparer());
 
             try
             {
-                var lines = File.ReadAllLines(localFilePath, Encoding.UTF8);
                 foreach (var line in lines)
                 {
                     if (string.IsNullOrWhiteSpace(line))

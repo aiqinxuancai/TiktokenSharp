@@ -4,6 +4,14 @@ using TiktokenSharp;
 
 Console.WriteLine("start test");
 
+/////////////////////////////////////////////////////
+
+
+TikToken tikTokenWithEncodingName = TikToken.GetEncoding("cl100k_base");
+var result = tikTokenWithEncodingName.Encode("hello world");
+
+/////////////////////////////////////////////////////
+///
 
 TikToken tikToken = TikToken.EncodingForModel("gpt-3.5-turbo");
 
@@ -25,13 +33,7 @@ Console.WriteLine(t1.Count); //35
 Console.WriteLine("test clear");
 
 
-/////////////////////////////////////////////////////
 
-
-TikToken tikTokenWithEncodingName = TikToken.GetEncoding("cl100k_base");
-var result = tikTokenWithEncodingName.Encode("hello world");
-
-/////////////////////////////////////////////////////
 
 
 TikToken tikTokenTextDavinci003 = TikToken.EncodingForModel("text-davinci-003");

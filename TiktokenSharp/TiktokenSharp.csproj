@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.1;netstandard2.0</TargetFrameworks>
@@ -10,7 +10,7 @@
 	<RepositoryUrl>https://github.com/aiqinxuancai/TiktokenSharp</RepositoryUrl>
 	<PackageTags>chatgpt;openai</PackageTags>
 	<Title>TiktokenSharp</Title>
-	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.5</VersionPrefix>
+	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.6</VersionPrefix>
 	<Authors>aiqinxuancai</Authors>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 
@@ -31,5 +31,10 @@
 	    <PrivateAssets>all</PrivateAssets>
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="TiktokenFiles\cl100k_base.tiktoken"/>
+		<EmbeddedResource Include="TiktokenFiles\p50k_base.tiktoken"/>
 	</ItemGroup>
 </Project>

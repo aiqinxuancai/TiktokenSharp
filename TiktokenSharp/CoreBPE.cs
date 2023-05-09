@@ -23,12 +23,8 @@ namespace TiktokenSharp
 
 
         private Dictionary<int, string> _specialTokensDecoder { get; set; }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="encoder"></param>
-        /// <param name="specialTokensEncoder"></param>
-        /// <param name="pattern"></param>
+
+
         public CoreBPE(Dictionary<byte[], int> encoder, Dictionary<string, int> specialTokensEncoder, string pattern)
         {
             _encoder = encoder;

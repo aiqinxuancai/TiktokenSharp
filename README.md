@@ -8,6 +8,8 @@ If you want to use the ChatGPT C# library that integrates this repository and im
 
 ## Getting Started
 
+TiktokenSharp supports `.Net Standard 2.0` and `.Net Standard 2.1`.
+
 TiktokenSharp is available as [NuGet package](https://www.nuget.org/packages/TiktokenSharp/).
 
 ```csharp
@@ -32,8 +34,10 @@ I noticed that some users would like to get a comparison of efficiency. Here, I 
 
 ### CPU
 
-<details> <summary>Code：</summary>
-  
+<details> 
+
+<summary>Code：</summary>
+
 ```csharp
 const string kLongText = "King Lear, one of Shakespeare's darkest and most savage plays, tells the story of the foolish and Job-like Lear, who divides his kingdom, as he does his affections, according to vanity and whim. Lear’s failure as a father engulfs himself and his world in turmoil and tragedy.";
 
@@ -77,6 +81,7 @@ static async Task SpeedSharpToken()
 ```
   
 </details>
+
 TiktokenSharp is approximately 57% faster than SharpToken.
 
 * Speed`TiktokenSharp` = 570.1206 ms
@@ -92,8 +97,12 @@ TiktokenSharp is approximately 57% faster than SharpToken.
 
 TiktokenSharp has approximately 26% less memory usage than SharpToken.
 
-
 ## Update
+### 1.0.6 20230509
+* cl100k_base and p50k_base 
+
+### 1.0.5 20230508
+* New support for .Net Standard 2.0 has been added, which can be used in higher versions of the .Net Framework.
 
 ### 1.0.4 20230424
 * Add method TikToken.GetEncoding(encodingName).
