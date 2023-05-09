@@ -26,6 +26,8 @@ var i = tikToken.Encode("hello world"); //[15339, 1917]
 var d = tikToken.Decode(i); //hello world
 ```
 
+
+
 ## Efficiency Comparison
 
 I noticed that some users would like to get a comparison of efficiency. Here, I use SharpToken as the basic comparison, with the encoder cl100k_base, on the .Net 6.0 in Debug mode.
