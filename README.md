@@ -24,6 +24,14 @@ var i = tikToken.Encode("hello world"); //[15339, 1917]
 var d = tikToken.Decode(i); //hello world
 ```
 
+**When using a new encoder for the first time, the required tiktoken files for the encoder will be downloaded from the internet. This may take some time.** Once the download is successful, subsequent uses will not require downloading again. You can set TikToken.PBEFileDirectory before using the encoder to modify the storage path of the downloaded tiktoken files, or you can pre-download the files to avoid network issues causing download failures.
+
+**Why are the tiktoken files not integrated into the package?** On one hand, this would make the package size larger. On the other hand, I want to stay as consistent as possible with OpenAI's official Python code.
+
+Below are the file download links:
+[p50k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken)
+[cl100k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken)
+
 ## Efficiency Comparison
 
 I noticed that some users would like to get a comparison of efficiency. Here, I use SharpToken as the basic comparison, with the encoder cl100k_base, on the .Net 6.0 in Debug mode.
@@ -32,8 +40,9 @@ I noticed that some users would like to get a comparison of efficiency. Here, I 
 
 ### CPU
 
-<details> <summary>Code：</summary>
-  
+<details> 
+<summary>Code：</summary>
+
 ```csharp
 const string kLongText = "King Lear, one of Shakespeare's darkest and most savage plays, tells the story of the foolish and Job-like Lear, who divides his kingdom, as he does his affections, according to vanity and whim. Lear’s failure as a father engulfs himself and his world in turmoil and tragedy.";
 
@@ -94,6 +103,9 @@ TiktokenSharp has approximately 26% less memory usage than SharpToken.
 
 
 ## Update
+
+### 1.0.5 20230508
+* New support for .Net Standard 2.0 has been added, which can be used in higher versions of the .Net Framework.
 
 ### 1.0.4 20230424
 * Add method TikToken.GetEncoding(encodingName).
