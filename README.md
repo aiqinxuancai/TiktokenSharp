@@ -6,7 +6,7 @@ Currently, `cl100k_base` `p50k_base` has been implemented. Other encodings will 
 
 If you want to use the ChatGPT C# library that integrates this repository and implements context-based conversation, please visit [ChatGPTSharp](https://github.com/aiqinxuancai/ChatGPTSharp).
 
-### Getting Started
+## Getting Started
 
 TiktokenSharp is available as [NuGet package](https://www.nuget.org/packages/TiktokenSharp/).
 
@@ -23,6 +23,75 @@ TikToken tikToken = TikToken.GetEncoding("cl100k_base");
 var i = tikToken.Encode("hello world"); //[15339, 1917]
 var d = tikToken.Decode(i); //hello world
 ```
+
+## Efficiency Comparison
+
+I noticed that some users would like to get a comparison of efficiency. Here, I use SharpToken as the basic comparison, with the encoder cl100k_base, on the .Net 6.0 in Debug mode.
+* TiktokenSharp Version: 1.0.5 
+* SharpToken Version: 1.0.28
+
+### CPU
+
+<details> <summary>Code：</summary>
+  
+```csharp
+const string kLongText = "King Lear, one of Shakespeare's darkest and most savage plays, tells the story of the foolish and Job-like Lear, who divides his kingdom, as he does his affections, according to vanity and whim. Lear’s failure as a father engulfs himself and his world in turmoil and tragedy.";
+
+static async Task SpeedTiktokenSharp()
+{
+    TikToken tikToken = TikToken.GetEncoding("cl100k_base");
+    Stopwatch stopwatch = new Stopwatch();
+    stopwatch.Start();
+
+    for (int i = 0; i < 10000; i++) 
+    {
+        var encoded = tikToken.Encode(kLongText);
+        var decoded = tikToken.Decode(encoded);
+    }
+
+    stopwatch.Stop();
+    TimeSpan timespan = stopwatch.Elapsed;
+    double milliseconds = timespan.TotalMilliseconds;
+    Console.WriteLine($"SpeedTiktokenSharp = {milliseconds} ms");
+}
+
+static async Task SpeedSharpToken()
+{
+    var encoding = GptEncoding.GetEncoding("cl100k_base");
+
+    Stopwatch stopwatch = new Stopwatch();
+    stopwatch.Start();   
+
+    for (int i = 0; i < 10000; i++) 
+    {
+        var encoded = encoding.Encode(kLongText);
+        var decoded = encoding.Decode(encoded);
+    }
+
+    stopwatch.Stop();
+    TimeSpan timespan = stopwatch.Elapsed;
+    double milliseconds = timespan.TotalMilliseconds;
+    Console.WriteLine($"SpeedSharpToken = {milliseconds} ms");
+
+}
+```
+  
+</details>
+TiktokenSharp is approximately 57% faster than SharpToken.
+
+* Speed`TiktokenSharp` = 570.1206 ms
+* Speed`SharpToken` = 1312.8812 ms
+
+### Memory
+<details> <summary>Image：</summary>
+  
+![20230509125926](https://user-images.githubusercontent.com/4475018/236998921-d380899e-9b66-43c9-af66-f02bf8c2c6e5.png)
+![20230509130021](https://user-images.githubusercontent.com/4475018/236998944-eb1d1cf6-65b4-4669-9160-a8fc74e0d4c9.png)
+  
+</details>
+
+TiktokenSharp has approximately 26% less memory usage than SharpToken.
+
 
 ## Update
 
