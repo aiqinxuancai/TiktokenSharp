@@ -105,7 +105,7 @@ TiktokenSharp has approximately 26% less memory usage than SharpToken.
 ## Update
 
 ### 1.0.5 20230508
-* New support for .Net Standard 2.0 has been added, which can be used in higher versions of the .Net Framework.
+* New support for .Net Standard 2.0 has been added, making TiktokenSharp usable in the .Net Framework.
 
 ### 1.0.4 20230424
 * Add method TikToken.GetEncoding(encodingName).
