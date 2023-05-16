@@ -39,8 +39,7 @@ namespace TiktokenSharp.Test
 
         static void GPT35()
         {
-
-            TikToken tikToken = TikToken.EncodingForModel("gpt-3.5-turbo");
+            TikToken tikToken = TikToken.EncodingForModel("gpt-3.5-turbo"); // TikToken.GetEncoding("cl100k_base");
 
             var i = tikToken.Encode("hello world");
             var d = tikToken.Decode(i);
