@@ -77,24 +77,20 @@ namespace TiktokenSharp
                 {
                     nextSpecial = specialRegex.Match(text, startFind);
                     if (!nextSpecial.Success) break;
-
-#if NETSTANDARD2_1_OR_GREATER
-                    if (allowedSpecial.Contains(textSpan.Slice(nextSpecial.Index, nextSpecial.Length).ToString())) break;
-#else
                     if (allowedSpecial.Contains(text.Substring(nextSpecial.Index, nextSpecial.Length))) break;
-#endif
-
                     startFind = nextSpecial.Index + 1;
                 }
                 int end = nextSpecial.Success ? nextSpecial.Index : text.Length;
 
-#if NET7_0_OR_GREATER
-                foreach (var mat in regex.EnumerateMatches(textSpan))
+#if NET7_0_OR_GREATER 
+                foreach (var mat in regex.EnumerateMatches(textSpan.Slice(start, end - start)))
                 {
-                    var piece = Encoding.UTF8.GetBytes(textSpan.Slice(start: mat.Index, length: mat.Length).ToString());
+                    var v = textSpan.Slice(mat.Index, mat.Length).ToString();
+                    var piece = Encoding.UTF8.GetBytes(v);
 #else
                 foreach (Match mat in regex.Matches(text.Substring(start, end - start)))
                 {
+                    var v = mat.Value;
                     var piece = Encoding.UTF8.GetBytes(mat.Value);
 #endif
 

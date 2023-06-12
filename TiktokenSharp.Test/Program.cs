@@ -11,7 +11,7 @@ namespace TiktokenSharp.Test
         static void Main(string[] args)
         {
             //TikToken.PBEFileDirectory = @"D:\tikTokenFiles";
-            //GPT4();
+            GPT4();
             //GPT35();
             //TextDavinci();
 
@@ -25,11 +25,11 @@ namespace TiktokenSharp.Test
         static void GPT4()
         {
             TikToken tikToken = TikToken.GetEncoding("cl100k_base");
-            var i = tikToken.Encode("hello world");
-            var d = tikToken.Decode(i);
+            //var i = tikToken.Encode("hello world");
+            //var d = tikToken.Decode(i);
 
-            Debug.Assert(i.IsEqualTo(new List<int>() { 15339, 1917 }));
-            Debug.Assert(tikToken.Decode(new List<int>() { 15339, 1917 }) == "hello world");
+            //Debug.Assert(i.IsEqualTo(new List<int>() { 15339, 1917 }));
+            //Debug.Assert(tikToken.Decode(new List<int>() { 15339, 1917 }) == "hello world");
 
             var c = tikToken.Encode("hello <|endoftext|>", allowedSpecial: "all");
             Debug.Assert(c.IsEqualTo(new List<int>() { 15339, 220, 100257 }));

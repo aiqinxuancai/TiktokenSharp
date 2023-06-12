@@ -16,8 +16,18 @@ namespace TiktokenSharp.Test
 |------------------- |----------:|---------:|---------:|-------:|-------:|----------:|
 | SpeedTiktokenSharp |  31.31 us | 0.452 us | 0.401 us | 4.2725 | 0.1221 |  35.09 KB |
 |    SpeedSharpToken | 100.28 us | 1.106 us | 1.034 us | 6.7139 | 0.2441 |  54.93 KB |
+
+|             Method |      Mean |    Error |   StdDev |   Gen0 |   Gen1 | Allocated |
+|------------------- |----------:|---------:|---------:|-------:|-------:|----------:|
+| SpeedTiktokenSharp |  28.43 us | 0.562 us | 0.806 us | 2.7161 |      - |   22.3 KB |
+|    SpeedSharpToken | 106.84 us | 2.104 us | 2.809 us | 6.7139 | 0.2441 |  54.93 KB |
+
+
      
      */
+
+
+
 
 
     [MemoryDiagnoser]
