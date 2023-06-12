@@ -19,7 +19,10 @@ namespace TiktokenSharp
 
         private Regex _regex { get; set; }
 
-        private Dictionary<int, byte[]> _decoder { get; set; }
+
+        private Lazy<Dictionary<int, byte[]>> _lazyDecoder;
+
+        private Dictionary<int, byte[]> Decoder => _lazyDecoder.Value;
 
 
         private Dictionary<int, string> _specialTokensDecoder { get; set; }
@@ -32,16 +35,21 @@ namespace TiktokenSharp
         public CoreBPE(Dictionary<byte[], int> encoder, Dictionary<string, int> specialTokensEncoder, string pattern)
         {
             _encoder = encoder;
-            _regex = new Regex(pattern);
-            _specialRegex = new Regex(string.Join("|", specialTokensEncoder.Keys.Select(s => Regex.Escape(s))));
+            _regex = new Regex(pattern, RegexOptions.Compiled);
+            _specialRegex = new Regex(string.Join("|", specialTokensEncoder.Keys.Select(s => Regex.Escape(s))), RegexOptions.Compiled);
             _specialTokensEncoder = specialTokensEncoder;
 
-            _decoder = _encoder.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
-
-            if (_encoder.Count != _decoder.Count)
+            _lazyDecoder = new Lazy<Dictionary<int, byte[]>>(() =>
             {
-                throw new ArgumentException("Encoder and decoder sizes don't match");
-            }
+                var decoder = _encoder.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+
+                if (_encoder.Count != decoder.Count)
+                {
+                    throw new ArgumentException("Encoder and decoder sizes don't match");
+                }
+
+                return decoder;
+            });
 
             _specialTokensDecoder = specialTokensEncoder.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
 
@@ -110,7 +118,7 @@ namespace TiktokenSharp
             foreach (var token in tokens)
             {
                 byte[] tokenBytes = { };
-                if (_decoder.TryGetValue(token, out var value))
+                if (Decoder.TryGetValue(token, out var value))
                 {
                     tokenBytes = value;
                 } 

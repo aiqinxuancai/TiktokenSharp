@@ -2,6 +2,7 @@
 using TiktokenSharp;
 using System;
 using TiktokenSharp.Test.Utils;
+using BenchmarkDotNet.Running;
 
 namespace TiktokenSharp.Test 
 {
@@ -10,9 +11,12 @@ namespace TiktokenSharp.Test
         static void Main(string[] args)
         {
             //TikToken.PBEFileDirectory = @"D:\tikTokenFiles";
-            GPT4();
-            GPT35();
-            TextDavinci();
+            //GPT4();
+            //GPT35();
+            //TextDavinci();
+
+            var summary = BenchmarkRunner.Run<BenchmarkTest>();
+
         }
 
 
