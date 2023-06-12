@@ -56,7 +56,7 @@ namespace TiktokenSharp
             var sortedTokenBytes = _encoder.Keys.ToList();
         }
 
-
+        //TODO add only get token counts func
 
         public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial)
         {
@@ -64,6 +64,9 @@ namespace TiktokenSharp
             Regex regex = _regex;
             var ret = new List<int>();
 
+#if NETSTANDARD2_1_OR_GREATER || NET7_0_OR_GREATER
+            var textSpan = text.AsSpan();
+#endif
             int start = 0;
             int lastPieceTokenLen = 0;
             while (true)
@@ -74,14 +77,27 @@ namespace TiktokenSharp
                 {
                     nextSpecial = specialRegex.Match(text, startFind);
                     if (!nextSpecial.Success) break;
+
+#if NETSTANDARD2_1_OR_GREATER
+                    if (allowedSpecial.Contains(textSpan.Slice(nextSpecial.Index, nextSpecial.Length).ToString())) break;
+#else
                     if (allowedSpecial.Contains(text.Substring(nextSpecial.Index, nextSpecial.Length))) break;
+#endif
+
                     startFind = nextSpecial.Index + 1;
                 }
                 int end = nextSpecial.Success ? nextSpecial.Index : text.Length;
 
+#if NET7_0_OR_GREATER
+                foreach (var mat in regex.EnumerateMatches(textSpan))
+                {
+                    var piece = Encoding.UTF8.GetBytes(textSpan.Slice(start: mat.Index, length: mat.Length).ToString());
+#else
                 foreach (Match mat in regex.Matches(text.Substring(start, end - start)))
                 {
                     var piece = Encoding.UTF8.GetBytes(mat.Value);
+#endif
+
                     if (_encoder.TryGetValue(piece, out int token))
                     {
                         lastPieceTokenLen = 1;

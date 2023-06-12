@@ -11,14 +11,6 @@ namespace TiktokenSharp.Test
 {
     /*
      * 
-     
-|             Method |      Mean |    Error |   StdDev |   Gen0 |   Gen1 | Allocated |
-|------------------- |----------:|---------:|---------:|-------:|-------:|----------:|
-| SpeedTiktokenSharp |  37.55 us | 0.536 us | 0.501 us | 4.2725 | 0.1221 |  35.09 KB |
-|    SpeedSharpToken | 100.14 us | 1.393 us | 1.303 us | 6.7139 | 0.2441 |  54.93 KB |
-     
-
-use RegexOptions.Compiled 
 
 |             Method |      Mean |    Error |   StdDev |   Gen0 |   Gen1 | Allocated |
 |------------------- |----------:|---------:|---------:|-------:|-------:|----------:|
