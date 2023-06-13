@@ -103,7 +103,7 @@ namespace TiktokenSharp
                 }
             }
 
-            return _corePBE.EncodeNative(text, allowedSpecialSet).Item1;
+            return _corePBE.EncodeNative(text, allowedSpecialSet);
         }
 
 

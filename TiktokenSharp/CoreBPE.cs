@@ -58,29 +58,37 @@ namespace TiktokenSharp
 
         //TODO add only get token counts func
 
-        public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial)
+        public List<int> EncodeNative(string text, HashSet<string> allowedSpecial)
         {
             Regex specialRegex = _specialRegex;
             Regex regex = _regex;
             var ret = new List<int>();
 
-#if NETSTANDARD2_1_OR_GREATER || NET7_0_OR_GREATER
+#if NET7_0_OR_GREATER
             var textSpan = text.AsSpan();
 #endif
             int start = 0;
-            int lastPieceTokenLen = 0;
+            int nextStart = 0;
+            string nextSpecialValue = string.Empty;
+            int end = text.Length;
+
             while (true)
             {
-                Match nextSpecial;
                 int startFind = start;
-                while (true)
+                if (allowedSpecial.Count != 0)
                 {
-                    nextSpecial = specialRegex.Match(text, startFind);
-                    if (!nextSpecial.Success) break;
-                    if (allowedSpecial.Contains(text.Substring(nextSpecial.Index, nextSpecial.Length))) break;
-                    startFind = nextSpecial.Index + 1;
+                    Match nextSpecial;
+                    while (true)
+                    {
+                        nextSpecial = specialRegex.Match(text, startFind);
+                        if (!nextSpecial.Success) break;
+                        if (allowedSpecial.Contains(text.Substring(nextSpecial.Index, nextSpecial.Length))) break;
+                        startFind = nextSpecial.Index + 1;
+                    }
+                    end = nextSpecial.Success ? nextSpecial.Index : text.Length;
+                    nextStart = nextSpecial.Index + nextSpecial.Length;
+                    nextSpecialValue = nextSpecial.Value;
                 }
-                int end = nextSpecial.Success ? nextSpecial.Index : text.Length;
 
 #if NET7_0_OR_GREATER 
                 foreach (var mat in regex.EnumerateMatches(textSpan.Slice(start, end - start)))
@@ -96,22 +104,18 @@ namespace TiktokenSharp
 
                     if (_encoder.TryGetValue(piece, out int token))
                     {
-                        lastPieceTokenLen = 1;
                         ret.Add(token);
                         continue;
                     }
                     var tokens = BytePairEncoding.BytePairEncode(piece, _encoder);
-                    lastPieceTokenLen = tokens.Count;
                     ret.AddRange(tokens);
                 }
 
-                if (nextSpecial.Success)
+                if (end != text.Length)
                 {
-                    var piece = nextSpecial.Value;
-                    var token = _specialTokensEncoder[piece];
+                    var token = _specialTokensEncoder[nextSpecialValue];
                     ret.Add(token);
-                    start = nextSpecial.Index + nextSpecial.Length;
-                    lastPieceTokenLen = 0;
+                    start = nextStart;
                 }
                 else
                 {
@@ -119,10 +123,8 @@ namespace TiktokenSharp
                 }
             }
 
-            return (ret, lastPieceTokenLen);
+            return ret;
         }
-
-
 
         public byte[] DecodeNative(int[] tokens)
         {
