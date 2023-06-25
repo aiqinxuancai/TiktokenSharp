@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using TiktokenSharp.Model;
 using TiktokenSharp.Utils;
 
@@ -97,6 +99,30 @@ namespace TiktokenSharp.Services
             return GetEncoding(encodingName);
         }
 
+        /// <summary>
+        /// Get encoding setting with model name.
+        /// </summary>
+        /// <param name="modelName">gpt-4 gpt-3.5-turbo ...</param>
+        /// <returns></returns>
+        public async Task<EncodingSettingModel> GetEncodingSettingAsync(string modelOrEncodingName)
+        {
+            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value;
+
+            if (string.IsNullOrEmpty(encodingName))
+            {
+                if (MODEL_TO_ENCODING.Any(a => a.Value == modelOrEncodingName))
+                {
+                    //modelOrEncodingName is encoding name
+                    encodingName = modelOrEncodingName;
+                }
+            }
+
+            return await GetEncodingAsync(encodingName);
+        }
+
+        
+
+
 
         /// <summary>
         /// Get encoding setting with encoding name.
@@ -121,7 +147,7 @@ namespace TiktokenSharp.Services
                         }
                     case "p50k_base":
                         {
-                            return p50k_base();
+                            return p50k_base().Result;
                         }
                     case "p50k_edit":
                         {
@@ -130,7 +156,7 @@ namespace TiktokenSharp.Services
                         }
                     case "cl100k_base":
                         {
-                            return cl100k_base();
+                            return cl100k_base().Result;
                         }
                     default:
                         throw new NotImplementedException();
@@ -142,6 +168,56 @@ namespace TiktokenSharp.Services
                 throw new NotImplementedException("Unsupported model");
             }
         }
+
+
+
+
+
+        /// <summary>
+        /// Get encoding setting with encoding name.
+        /// </summary>
+        /// <param name="encodingName">cl100k_base p50k_base ...</param>
+        /// <returns></returns>
+        public async Task<EncodingSettingModel> GetEncodingAsync(string encodingName)
+        {
+            if (!string.IsNullOrEmpty(encodingName))
+            {
+                switch (encodingName)
+                {
+                    case "gpt2":
+                        {
+                            //TODO
+                            throw new NotImplementedException();
+                        }
+                    case "r50k_base":
+                        {
+                            //TODO
+                            throw new NotImplementedException(); ;
+                        }
+                    case "p50k_base":
+                        {
+                            return await p50k_base();
+                        }
+                    case "p50k_edit":
+                        {
+                            //TODO
+                            throw new NotImplementedException();
+                        }
+                    case "cl100k_base":
+                        {
+                            return await cl100k_base();
+                        }
+                    default:
+                        throw new NotImplementedException();
+                }
+
+            }
+            else
+            {
+                throw new NotImplementedException("Unsupported model");
+            }
+        }
+
 
 
         private Dictionary<byte[], int> LoadTikTokenBpeFromLocal(string tikTokenBpeFile)
@@ -160,7 +236,7 @@ namespace TiktokenSharp.Services
             return bpeDict;
         }
 
-        private Dictionary<byte[], int> LoadTikTokenBpe(string tikTokenBpeFile)
+        private async Task<Dictionary<byte[], int>> LoadTikTokenBpe(string tikTokenBpeFile)
         {
             string localFilePath;
             if (tikTokenBpeFile.StartsWith("http"))
@@ -174,11 +250,12 @@ namespace TiktokenSharp.Services
                 localFilePath = Path.Combine(saveDir, fileName);
                 if (!File.Exists(localFilePath))
                 {
-                    using (var client = new WebClient())
+                    using (var client = new HttpClient())
                     {
                         //client.DownloadFile(tikTokenBpeFile, localFilePath);
-                        var data = client.DownloadData(tikTokenBpeFile);
-                        File.WriteAllBytes(localFilePath, data); 
+                        //File.WriteAllBytes(localFilePath, data);
+                        var data = await client.GetByteArrayAsync(tikTokenBpeFile);
+                        File.WriteAllBytes(localFilePath, data);
                     }
                 }
             }
@@ -219,10 +296,10 @@ namespace TiktokenSharp.Services
         }
 
 
-        private EncodingSettingModel cl100k_base()
+        private async Task<EncodingSettingModel> cl100k_base()
         {
             //When using the mod for the first time, the pbe file will be downloaded over the network.
-            var mergeable_ranks = LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken");
+            var mergeable_ranks = await LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken");
             var special_tokens = new Dictionary<string, int>{
                                     { ENDOFTEXT, 100257},
                                     { FIM_PREFIX, 100258},
@@ -241,10 +318,10 @@ namespace TiktokenSharp.Services
         }
 
 
-        private EncodingSettingModel p50k_base()
+        private async Task<EncodingSettingModel> p50k_base()
         {
             //When using the mod for the first time, the pbe file will be downloaded over the network.
-            var mergeable_ranks = LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken");
+            var mergeable_ranks = await LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken");
             var special_tokens = new Dictionary<string, int>{
                                     { ENDOFTEXT, 50256}
                                 };

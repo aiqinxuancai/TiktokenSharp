@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using TiktokenSharp.Model;
 using TiktokenSharp.Services;
 
@@ -31,6 +32,10 @@ namespace TiktokenSharp
             return new TikToken(setting);
         }
 
+
+        
+
+
         /// <summary>
         /// get encoding with encoding name
         /// </summary>
@@ -43,8 +48,30 @@ namespace TiktokenSharp
             return new TikToken(setting);
         }
 
-        
 
+        /// <summary>
+        /// get encoding with modelName
+        /// </summary>
+        /// <param name="modelName">gpt-3.5-turbo</param>
+        /// <returns></returns>
+        public static async Task<TikToken> EncodingForModelAsync(string modelName)
+        {
+            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
+            var setting = await EncodingManager.Instance.GetEncodingSettingAsync(modelName);
+            return new TikToken(setting);
+        }
+
+        /// <summary>
+        /// get encoding with encoding name
+        /// </summary>
+        /// <param name="encodingName">cl100k_base</param>
+        /// <returns></returns>
+        public static async Task<TikToken> GetEncodingAsync(string encodingName)
+        {
+            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
+            var setting = await EncodingManager.Instance.GetEncodingSettingAsync(encodingName);
+            return new TikToken(setting);
+        }
 
         public static Regex SpecialTokenRegex(HashSet<string> tokens)
         {
@@ -58,15 +85,11 @@ namespace TiktokenSharp
 
         public TikToken(EncodingSettingModel setting)
         {
-
-
             if (setting.ExplicitNVocab != null)
             {
                 Debug.Assert(setting.SpecialTokens.Count + setting.MergeableRanks.Count == setting.ExplicitNVocab);
                 Debug.Assert(setting.MaxTokenValue == setting.ExplicitNVocab - 1);
             }
-
-
 
             _corePBE = new CoreBPE(setting.MergeableRanks, setting.SpecialTokens, setting.PatStr);
             _setting = setting;
@@ -88,8 +111,6 @@ namespace TiktokenSharp
                 disallowedSpecial = "all";
             }
 
-
-
             var allowedSpecialSet = allowedSpecial.Equals("all") ? SpecialTokensSet() : new HashSet<string>((IEnumerable<string>)allowedSpecial);
             var disallowedSpecialSet = disallowedSpecial.Equals("all") ? new HashSet<string>(SpecialTokensSet().Except(allowedSpecialSet)) : new HashSet<string>((IEnumerable<string>)disallowedSpecial);
 
@@ -105,7 +126,6 @@ namespace TiktokenSharp
 
             return _corePBE.EncodeNative(text, allowedSpecialSet).Item1;
         }
-
 
         public string Decode(List<int> tokens)
         {
