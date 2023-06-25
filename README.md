@@ -104,6 +104,9 @@ TiktokenSharp has approximately 26% less memory usage than SharpToken.
 
 ## Update
 
+### 1.0.6 20230625
+* Replace WebClient with HttpClient, add async methods.
+
 ### 1.0.5 20230508
 * New support for .Net Standard 2.0 has been added, making TiktokenSharp usable in the .Net Framework.
 
