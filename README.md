@@ -104,6 +104,9 @@ TiktokenSharp has approximately 26% less memory usage than SharpToken.
 
 ## Update
 
+### 1.0.7 20231010
+* Corrected the issue where some new models could not properly obtain the encoder.
+
 ### 1.0.6 20230625
 * Replace WebClient with HttpClient, add async methods.
 
