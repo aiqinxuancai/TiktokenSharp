@@ -28,6 +28,8 @@ var d = tikToken.Decode(i); //hello world
 
 **Why are the tiktoken files not integrated into the package?** On one hand, this would make the package size larger. On the other hand, I want to stay as consistent as possible with OpenAI's official Python code.
 
+If you are deploying cloud functions, such as "Azure App Service," which cannot read/write local files, please package tiktoken files(PBE Dir) with the release files.
+
 Below are the file download links:
 [p50k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken)
 [cl100k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken)
