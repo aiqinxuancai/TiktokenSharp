@@ -243,10 +243,21 @@ namespace TiktokenSharp.Services
             {
                 var fileName = Path.GetFileName(tikTokenBpeFile);
                 var saveDir = PBEFileDirectory; //Path.Combine(AppContext.BaseDirectory, "bpe");
-                if (!Directory.Exists(saveDir))
+
+                try
                 {
-                    Directory.CreateDirectory(saveDir);
+                    //If an exception occurs, it means that the folder cannot be created. Change the storage folder to the Temp directory.
+                    if (!Directory.Exists(saveDir))
+                    {
+                        Directory.CreateDirectory(saveDir);
+                    }
                 }
+                catch
+                {
+                    saveDir = Path.GetTempPath();
+                }
+
+
                 localFilePath = Path.Combine(saveDir, fileName);
                 if (!File.Exists(localFilePath))
                 {
