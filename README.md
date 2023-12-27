@@ -28,6 +28,8 @@ var d = tikToken.Decode(i); //hello world
 
 **Why are the tiktoken files not integrated into the package?** On one hand, this would make the package size larger. On the other hand, I want to stay as consistent as possible with OpenAI's official Python code.
 
+If you are deploying cloud functions, such as "Azure App Service," which cannot read/write local files, please package tiktoken files(PBE Dir) with the publish files.
+
 Below are the file download links:
 [p50k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken)
 [cl100k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken)
@@ -103,6 +105,9 @@ TiktokenSharp has approximately 26% less memory usage than SharpToken.
 
 
 ## Update
+
+### 1.0.7 20231010
+* Corrected the issue where some new models could not properly obtain the encoder.
 
 ### 1.0.6 20230625
 * Replace WebClient with HttpClient, add async methods.

@@ -36,6 +36,8 @@ namespace TiktokenSharp.Services
                                                             // chat
                                                             { "gpt-4", "cl100k_base" },
                                                             { "gpt-3.5-turbo", "cl100k_base" },
+                                                            { "gpt-3.5-turbo-16k", "cl100k_base" },
+
                                                             // text
                                                             { "text-davinci-003", "p50k_base" },
                                                             { "text-davinci-002", "p50k_base" },
@@ -85,7 +87,12 @@ namespace TiktokenSharp.Services
         /// <returns></returns>
         public EncodingSettingModel GetEncodingSetting(string modelOrEncodingName)
         {
-            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value;
+            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key)).Value;
+
+            if (string.IsNullOrEmpty(encodingName))
+            {
+                encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value;
+            }
 
             if (string.IsNullOrEmpty(encodingName))
             {
