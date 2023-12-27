@@ -1,0 +1,48 @@
+name: Build and Publish NuGet on Tag
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive' 
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.0.*'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Pack
+      run: dotnet pack TiktokenSharp/TiktokenSharp.csproj --configuration Release --no-build -o nupkgs
+
+    - name: Determine Pre-release Status
+      id: prerelease
+      run: |
+        $ref = "${{ github.ref }}"
+        if ($ref -like "*alpha*") {
+          echo "##[set-output name=status;]true"
+        } else {
+          echo "##[set-output name=status;]false"
+        }
+      shell: powershell
+
+    - name: Publish to GitHub Releases
+      uses: softprops/action-gh-release@v1
+      with:
+        files: nupkgs/*.nupkg
+        prerelease: ${{ steps.prerelease.outputs.status }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
