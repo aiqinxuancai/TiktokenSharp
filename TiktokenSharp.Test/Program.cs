@@ -12,10 +12,14 @@ namespace TiktokenSharp.Test
         {
             //TikToken.PBEFileDirectory = @"D:\tikTokenFiles";
             //GPT4();
-            GPT35();
+            //GPT35();
             //TextDavinci();
+            var b = new BenchmarkTest();
+            b.Setup().Wait();
+            b.TiktokenSharp();
 
-            //var summary = BenchmarkRunner.Run<BenchmarkTest>();
+
+            var summary = BenchmarkRunner.Run<BenchmarkTest>();
 
         }
 

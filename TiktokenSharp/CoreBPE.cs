@@ -26,8 +26,10 @@ namespace TiktokenSharp
 
 
         private Dictionary<int, string> _specialTokensDecoder { get; set; }
+
+
         /// <summary>
-        /// 
+        /// CoreBPE
         /// </summary>
         /// <param name="encoder"></param>
         /// <param name="specialTokensEncoder"></param>
@@ -56,8 +58,68 @@ namespace TiktokenSharp
             var sortedTokenBytes = _encoder.Keys.ToList();
         }
 
+#if NET7_0_OR_GREATER
+        public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial)
+        {
+            Regex specialRegex = _specialRegex;
+            Regex regex = _regex;
+            var ret = new List<int>();
 
+            ReadOnlySpan<char> textSpan = text.AsSpan();
+            int lastPieceTokenLen = 0;
+            int currentIndex = 0;
 
+            var enumerator = specialRegex.EnumerateMatches(text);
+
+            while (currentIndex < text.Length)
+            {
+                int nextMatchStart = text.Length;
+
+                if (enumerator.MoveNext())
+                {
+                    var current = enumerator.Current;
+                    if (allowedSpecial.Contains(textSpan.Slice(current.Index, current.Length).ToString()))
+                    {
+                        nextMatchStart = current.Index;
+                    }
+                }
+
+                ReadOnlySpan<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
+                foreach (var match in regex.EnumerateMatches(currentSpan))
+                {
+                    var piece = Encoding.UTF8.GetBytes(currentSpan.Slice(match.Index, match.Length).ToString());
+                    if (_encoder.TryGetValue(piece, out int token))
+                    {
+                        lastPieceTokenLen = 1;
+                        ret.Add(token);
+                    }
+                    else
+                    {
+                        var tokens = BytePairEncoding.BytePairEncode(piece, _encoder);
+                        lastPieceTokenLen = tokens.Count;
+                        ret.AddRange(tokens);
+                    }
+                }
+
+                currentIndex = nextMatchStart;
+
+                if (currentIndex < text.Length)
+                {
+                    var match = enumerator.Current;
+                    var pieceSpan = textSpan.Slice(currentIndex, match.Length);
+                    if (_specialTokensEncoder.TryGetValue(pieceSpan.ToString(), out int token))
+                    {
+                        ret.Add(token);
+                        currentIndex += match.Length;
+                        lastPieceTokenLen = 0;
+                    }
+                }
+            }
+
+            return (ret, lastPieceTokenLen);
+        }
+
+#else 
         public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial)
         {
             Regex specialRegex = _specialRegex;
@@ -109,7 +171,7 @@ namespace TiktokenSharp
 
             return (ret, lastPieceTokenLen);
         }
-
+#endif
 
 
         public byte[] DecodeNative(int[] tokens)

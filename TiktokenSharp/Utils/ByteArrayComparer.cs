@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace TiktokenSharp.Utils
@@ -28,16 +29,16 @@ namespace TiktokenSharp.Utils
 
         public int GetHashCode(byte[] obj)
         {
-            if (obj == null)
+            if (obj == null) throw new ArgumentNullException(nameof(obj));
+            unchecked 
             {
-                throw new ArgumentNullException(nameof(obj));
+                int hash = 17;
+                foreach (byte element in obj)
+                {
+                    hash = hash * 31 + element; 
+                }
+                return hash;
             }
-            int hash = 17;
-            foreach (byte b in obj)
-            {
-                hash = hash * 31 + b;
-            }
-            return hash;
         }
     }
 

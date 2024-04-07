@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>.net8;.net7;netstandard2.1;netstandard2.0</TargetFrameworks>
 	<LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
 	<Description>This project implements token calculation for OpenAI's gpt-3.5-turbo model, specifically using `cl100k_base` encoding.</Description>
@@ -13,7 +13,7 @@
 	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.7</VersionPrefix>
 	<Authors>aiqinxuancai</Authors>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-
+	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 	<ItemGroup>
 		<None Include="..\LICENSE.txt">

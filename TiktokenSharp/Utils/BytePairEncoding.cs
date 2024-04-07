@@ -8,6 +8,76 @@ namespace TiktokenSharp.Utils
 
     public class BytePairEncoding
     {
+#if NET7_0_OR_GREATER
+        static List<T> BytePairMerge<T>(byte[] piece, Dictionary<byte[], int> ranks, Func<Range, T> f)
+        {
+            ReadOnlyMemory<byte> pieceMemory = piece;
+
+            var parts = new List<(int Start, int Rank)>(piece.Length + 1);
+
+            for (int i = 0; i <= piece.Length; i++)
+            {
+                parts.Add((i, int.MaxValue));
+            }
+
+            int? GetRank(int startIdx, int skip = 0)
+            {
+                if (startIdx + skip + 2 < parts.Count)
+                {
+                    var slice = pieceMemory.Slice(parts[startIdx].Start, parts[startIdx + skip + 2].Start - parts[startIdx].Start);
+                    if (ranks.TryGetValue(slice.ToArray(), out var rank))
+                    {
+                        return rank;
+                    }
+                }
+                return null;
+            }
+
+            for (int i = 0; i < parts.Count - 2; i++)
+            {
+                var rank = GetRank(i);
+                if (rank != null)
+                {
+                    parts[i] = (parts[i].Start, rank.Value);
+                }
+            }
+
+            while (parts.Count > 1)
+            {
+                var minRank = (Rank: int.MaxValue, Index: 0);
+                for (int i = 0; i < parts.Count - 1; i++)
+                {
+                    if (parts[i].Rank < minRank.Rank)
+                    {
+                        minRank = (parts[i].Rank, i);
+                    }
+                }
+                if (minRank.Rank != int.MaxValue)
+                {
+                    int i = minRank.Index;
+                    parts[i] = (parts[i].Start, GetRank(i, 1) ?? int.MaxValue);
+                    if (i > 0)
+                    {
+                        parts[i - 1] = (parts[i - 1].Start, GetRank(i - 1, 1) ?? int.MaxValue);
+                    }
+                    parts.RemoveAt(i + 1);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            var outList = new List<T>(parts.Count - 1);
+            for (int i = 0; i < parts.Count - 1; i++)
+            {
+                outList.Add(f(parts[i].Start..parts[i + 1].Start));
+            }
+            return outList;
+        }
+
+
+#else
         static List<T> BytePairMerge<T>(byte[] piece, Dictionary<byte[], int> ranks, Func<Range, T> f)
         {
             var parts = Enumerable.Range(0, piece.Length + 1).Select(i => (i, int.MaxValue)).ToList();
@@ -64,6 +134,9 @@ namespace TiktokenSharp.Utils
             }
             return outList;
         }
+#endif
+
+
 
         public static List<int> BytePairEncode(byte[] piece, Dictionary<byte[], int> ranks)
         {
