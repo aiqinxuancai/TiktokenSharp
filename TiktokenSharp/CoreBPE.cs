@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,8 +13,11 @@ namespace TiktokenSharp
     {
         private Dictionary<string, int> _specialTokensEncoder { get; set; }
 
-        // TODO private max_token_value ??
         private Dictionary<ReadOnlyMemory<byte>, int> _encoder { get; set; }
+
+        // TODO Cache？
+        //private ConcurrentDictionary<char[], List<int>> _cache { get; set; }
+        //private MemoryCache _cache = MemoryCache.Default;
 
         private Regex _specialRegex { get; set; }
 
@@ -37,6 +41,7 @@ namespace TiktokenSharp
         public CoreBPE(Dictionary<ReadOnlyMemory<byte>, int> encoder, Dictionary<string, int> specialTokensEncoder, string pattern)
         {
             _encoder = encoder;
+            //_cache = new ConcurrentDictionary<char[], List<int>>(new ReadOnlyMemoryComparer());
             _regex = new Regex(pattern, RegexOptions.Compiled);
             _specialRegex = new Regex(string.Join("|", specialTokensEncoder.Keys.Select(s => Regex.Escape(s))), RegexOptions.Compiled);
             _specialTokensEncoder = specialTokensEncoder;
@@ -61,16 +66,13 @@ namespace TiktokenSharp
 #if NET7_0_OR_GREATER
         public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
         {
-            Regex specialRegex = _specialRegex;
-            Regex regex = _regex;
             var ret = new List<int>();
 
-            ReadOnlySpan<char> textSpan = text.AsSpan();
+            var textSpan = text.AsMemory();
             int lastPieceTokenLen = 0;
             int currentIndex = 0;
 
-            var enumerator = specialRegex.EnumerateMatches(textSpan);
-
+            var enumerator = _specialRegex.EnumerateMatches(textSpan.Span);
 
             while (currentIndex < text.Length)
             {
@@ -78,13 +80,13 @@ namespace TiktokenSharp
 
                 if (enumerator.MoveNext())
                 {
+   
                     var current = enumerator.Current;
-
                     var currentText = textSpan.Slice(current.Index, current.Length).ToString();
 
                     if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
                     {
-                        throw new InvalidOperationException(currentText);
+                        throw new InvalidOperationException(currentText.ToString());
                     }
                     if (allowedSpecial != null && allowedSpecial.Contains(currentText))
                     {
@@ -93,10 +95,15 @@ namespace TiktokenSharp
 
                 }
 
-                ReadOnlySpan<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
-                foreach (var match in regex.EnumerateMatches(currentSpan))
+                //read only 
+
+                ReadOnlyMemory<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
+                foreach (var match in _regex.EnumerateMatches(currentSpan.Span))
                 {
-                    var piece = Encoding.UTF8.GetBytes(currentSpan.Slice(match.Index, match.Length).ToString());
+                    var charSpan = currentSpan.Slice(match.Index, match.Length);
+                    //var byteSpan = ByteHelper.ConvertReadOnlyMemoryCharToByte(charSpan);
+
+                    var piece = Encoding.UTF8.GetBytes(charSpan.ToString()); //TODO remove ToString
                     if (_encoder.TryGetValue(piece, out int token))
                     {
                         lastPieceTokenLen = 1;
@@ -104,9 +111,19 @@ namespace TiktokenSharp
                     }
                     else
                     {
+                        //TODO Cache？
+
+                        //if (_cache.TryGetValue(piece, out List<int> cacheToken))
+                        //{
+                        //    ret.AddRange(cacheToken);
+                        //    continue;
+                        //}
+
                         var tokens = BytePairEncoding.BytePairEncode(piece, _encoder);
                         lastPieceTokenLen = tokens.Count;
                         ret.AddRange(tokens);
+
+                        //_cache[piece] = tokens;
                     }
                 }
 
@@ -116,7 +133,7 @@ namespace TiktokenSharp
                 {
                     var match = enumerator.Current;
                     var pieceSpan = textSpan.Slice(currentIndex, match.Length);
-                    if (_specialTokensEncoder.TryGetValue(pieceSpan.ToString(), out int token))
+                    if (_specialTokensEncoder.TryGetValue(pieceSpan.ToString(), out int token)) //TODO remove ToString
                     {
                         ret.Add(token);
                         currentIndex += match.Length;

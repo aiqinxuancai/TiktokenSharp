@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,5 +21,13 @@ namespace TiktokenSharp.Utils
             }
             return Encoding.UTF8.GetString(allBytes);
         }
+
+        public static ReadOnlySpan<byte> ConvertReadOnlyMemoryCharToByte(ReadOnlyMemory<char> charMemory)
+        {
+            var charSpan = charMemory.Span;
+            var bytes = MemoryMarshal.AsBytes(charSpan);
+            return bytes;
+        }
+
     }
 }

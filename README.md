@@ -80,10 +80,11 @@ public int TiktokenSharp()
   
 </details>
 
+
 |        Method |      Job |  Runtime |      Mean |    Error |   StdDev |      Gen0 |  Allocated |
 |-------------- |--------- |--------- |----------:|---------:|---------:|----------:|-----------:|
-|    SharpToken | .NET 8.0 | .NET 8.0 | 112.86 ms | 0.712 ms | 0.595 ms | 2600.0000 | 23202285 B |
-| TiktokenSharp | .NET 8.0 | .NET 8.0 |  99.40 ms | 0.179 ms | 0.149 ms | 9800.0000 | 82321296 B |
+|    SharpToken | .NET 8.0 | .NET 8.0 | 116.38 ms | 1.026 ms | 0.909 ms | 2000.0000 | 23201696 B |
+| TiktokenSharp | .NET 8.0 | .NET 8.0 |  98.34 ms | 0.198 ms | 0.176 ms | 9833.3333 | 82321080 B |
 
 ## Update
 

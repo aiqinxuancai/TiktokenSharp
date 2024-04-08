@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -77,8 +78,15 @@ namespace TiktokenSharp
         {
             if (setting.ExplicitNVocab != null)
             {
-                Debug.Assert(setting.SpecialTokens.Count + setting.MergeableRanks.Count == setting.ExplicitNVocab);
-                Debug.Assert(setting.MaxTokenValue == setting.ExplicitNVocab - 1);
+                if (setting.SpecialTokens.Count + setting.MergeableRanks.Count != setting.ExplicitNVocab)
+                {
+                    throw new ArgumentException("SpecialTokens + MergeableRanks counts must equal ExplicitNVocab.");
+                }
+
+                if (setting.MaxTokenValue != setting.ExplicitNVocab - 1)
+                {
+                    throw new ArgumentException("MaxTokenValue must be equal to ExplicitNVocab - 1.");
+                }
             }
 
             _corePBE = new CoreBPE(setting.MergeableRanks, setting.SpecialTokens, setting.PatStr);
@@ -87,6 +95,39 @@ namespace TiktokenSharp
 
         public List<int> Encode(string text, HashSet<string> allowedSpecial = null, HashSet<string> disallowedSpecial = null)
         {
+//#if NET7_0_OR_GREATER
+//            HashSet<ReadOnlyMemory<char>>? allowedSpecialMemory = null;
+//            HashSet<ReadOnlyMemory<char>>? disallowedSpecialMemory = null;
+
+//#else
+//            List<ReadOnlyMemory<char>>? allowedSpecialMemory = null;
+//            List<ReadOnlyMemory<char>>? disallowedSpecialMemory = null;
+//#endif
+//            if (allowedSpecial != null)
+//            {
+//                allowedSpecialMemory = allowedSpecial
+//                    .Select(str => (ReadOnlyMemory<char>)str.AsMemory())
+//#if NET7_0_OR_GREATER
+//                    .ToHashSet();
+//#else
+//                    .ToList();
+//#endif
+//            }
+
+//            if (disallowedSpecial != null )
+//            {
+//                var disallowedSpecialMemcpy = disallowedSpecial
+//                    .Select(str => (ReadOnlyMemory<char>)str.AsMemory())
+//#if NET7_0_OR_GREATER
+//                    .ToHashSet();
+//#else
+//                    .ToList();
+//#endif
+//            }
+
+            
+
+
             return _corePBE.EncodeNative(text, allowedSpecial, disallowedSpecial).Item1;
         }
 
@@ -96,9 +137,6 @@ namespace TiktokenSharp
             string str = ByteHelper.ConvertByteListToString(ret);
             return str;
         }
-
-
-
 
 
     }

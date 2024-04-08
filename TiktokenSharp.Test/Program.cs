@@ -34,7 +34,7 @@ namespace TiktokenSharp.Test
             Debug.Assert(i.IsEqualTo(new List<int>() { 15339, 1917 }));
             Debug.Assert(tikToken.Decode(new List<int>() { 15339, 1917 }) == "hello world");
 
-            var c = tikToken.Encode("hello <|endoftext|>");
+            var c = tikToken.Encode("hello <|endoftext|>", new HashSet<string>() { "<|endoftext|>" });
             Debug.Assert(c.IsEqualTo(new List<int>() { 15339, 220, 100257 }));
 
             var t1 = tikToken.Encode("我很抱歉，我不能提供任何非法或不道德的建议。快速赚钱是不容易的，需要耐心、刻苦努力和经验。如果您想增加收入，请考虑增加工作时间、寻找其他业务机会、学习新技能或提高自己的价值等方法。请记住，通过合法而道德的方式来获得收入，才是长期稳定的解决方案。");
