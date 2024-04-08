@@ -6,13 +6,11 @@ using System.Linq;
 namespace TiktokenSharp.Utils
 {
 
-    public class BytePairEncoding
+    internal class BytePairEncoding
     {
 #if NET7_0_OR_GREATER
-        static List<T> BytePairMerge<T>(byte[] piece, Dictionary<byte[], int> ranks, Func<Range, T> f)
+        static List<T> BytePairMerge<T>(ReadOnlyMemory<byte> piece, Dictionary<ReadOnlyMemory<byte>, int> ranks, Func<Range, T> f)
         {
-            ReadOnlyMemory<byte> pieceMemory = piece;
-
             var parts = new List<(int Start, int Rank)>(piece.Length + 1);
 
             for (int i = 0; i <= piece.Length; i++)
@@ -24,8 +22,8 @@ namespace TiktokenSharp.Utils
             {
                 if (startIdx + skip + 2 < parts.Count)
                 {
-                    var slice = pieceMemory.Slice(parts[startIdx].Start, parts[startIdx + skip + 2].Start - parts[startIdx].Start);
-                    if (ranks.TryGetValue(slice.ToArray(), out var rank))
+                    ReadOnlyMemory<byte> sliceMemory = piece.Slice(parts[startIdx].Item1, parts[startIdx + skip + 2].Item1 - parts[startIdx].Item1);
+                    if (ranks.TryGetValue(sliceMemory, out var rank))
                     {
                         return rank;
                     }
@@ -78,7 +76,7 @@ namespace TiktokenSharp.Utils
 
 
 #else
-        static List<T> BytePairMerge<T>(byte[] piece, Dictionary<byte[], int> ranks, Func<Range, T> f)
+        static List<T> BytePairMerge<T>(ReadOnlyMemory<byte> piece, Dictionary<ReadOnlyMemory<byte>, int> ranks, Func<Range, T> f)
         {
             var parts = Enumerable.Range(0, piece.Length + 1).Select(i => (i, int.MaxValue)).ToList();
             int? GetRank(int startIdx, int skip = 0)
@@ -137,23 +135,26 @@ namespace TiktokenSharp.Utils
 #endif
 
 
-
-        public static List<int> BytePairEncode(byte[] piece, Dictionary<byte[], int> ranks)
+        public static List<int> BytePairEncode(byte[] piece, Dictionary<ReadOnlyMemory<byte>, int> ranks)
         {
+            ReadOnlyMemory<byte> pieceMemory = piece;
+
             if (piece.Length == 1)
             {
-                return new List<int> { ranks[piece] };
+                return new List<int> { ranks[pieceMemory] };
             }
-            return BytePairMerge(piece, ranks, p => ranks[piece[p.Start..p.End]]);
+            return BytePairMerge(pieceMemory, ranks, range => ranks[pieceMemory.Slice(range.Start.Value, range.End.Value - range.Start.Value)]);
         }
 
-        public static List<byte[]> BytePairSplit(byte[] piece, Dictionary<byte[], int> ranks)
+        public static List<byte[]> BytePairSplit(byte[] piece, Dictionary<ReadOnlyMemory<byte>, int> ranks)
         {
+            ReadOnlyMemory<byte> pieceMemory = piece;
+
             if (piece.Length == 1)
             {
-                return new List<byte[]> { piece };
+                return new List<byte[]> { pieceMemory.ToArray() };
             }
-            return BytePairMerge(piece, ranks, p => piece[p.Start..p.End]);
+            return BytePairMerge(pieceMemory, ranks, range => pieceMemory.Slice(range.Start.Value, range.End.Value - range.Start.Value).ToArray());
         }
 
 

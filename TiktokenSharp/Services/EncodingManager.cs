@@ -237,15 +237,13 @@ namespace TiktokenSharp.Services
             foreach (var line in contents.Where(l => !string.IsNullOrWhiteSpace(l)))
             {
                 var tokens = line.Split();
-                var tokenBytes = Convert.FromBase64String(tokens[0]);
-                var rank = int.Parse(tokens[1]);
-                bpeDict.Add(tokenBytes, rank);
+                bpeDict.Add(Convert.FromBase64String(tokens[0]), int.Parse(tokens[1]));
             }
 
             return bpeDict;
         }
 
-        private async Task<Dictionary<byte[], int>> LoadTikTokenBpe(string tikTokenBpeFile)
+        private async Task<Dictionary<ReadOnlyMemory<byte>, int>> LoadTikTokenBpe(string tikTokenBpeFile)
         {
             string localFilePath;
             if (tikTokenBpeFile.StartsWith("http"))
@@ -283,8 +281,7 @@ namespace TiktokenSharp.Services
             {
                 localFilePath = tikTokenBpeFile;
             }
-
-            var bpeDict = new Dictionary<byte[], int>(new ByteArrayComparer());
+            var bpeDict = new Dictionary<ReadOnlyMemory<byte>, int>(new ReadOnlyMemoryComparer());
 
             try
             {
@@ -302,9 +299,7 @@ namespace TiktokenSharp.Services
                         throw new FormatException($"Invalid file format: {localFilePath}");
                     }
 
-                    var tokenBytes = Convert.FromBase64String(tokens[0]);
-                    var rank = int.Parse(tokens[1]);
-                    bpeDict[tokenBytes] = rank;
+                    bpeDict[Convert.FromBase64String(tokens[0])] = int.Parse(tokens[1]);
                 }
             }
             catch (Exception ex)

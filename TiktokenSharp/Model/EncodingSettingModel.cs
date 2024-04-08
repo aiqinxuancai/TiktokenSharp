@@ -23,7 +23,7 @@ namespace TiktokenSharp.Model
         /// <summary>
         /// tiktoken file
         /// </summary>
-        public Dictionary<byte[], int> MergeableRanks { get; set; }
+        public Dictionary<ReadOnlyMemory<byte>, int> MergeableRanks { get; set; }
 
         public Dictionary<string, int> SpecialTokens { get; set; }
 

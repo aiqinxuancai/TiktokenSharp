@@ -10,7 +10,7 @@
 	<RepositoryUrl>https://github.com/aiqinxuancai/TiktokenSharp</RepositoryUrl>
 	<PackageTags>chatgpt;openai</PackageTags>
 	<Title>TiktokenSharp</Title>
-	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.9</VersionPrefix>
+	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.0</VersionPrefix>
 	<Authors>aiqinxuancai</Authors>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
@@ -26,6 +26,7 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0'">
+	  <PackageReference Include="System.Memory" Version="4.5.3" />
 	  <PackageReference Include="IndexRange" Version="1.0.2" />
 	  <PackageReference Include="TA.System.Runtime.CompilerServices.RuntimeHelpers.GetSubArray" Version="1.0.1">
 	    <PrivateAssets>all</PrivateAssets>

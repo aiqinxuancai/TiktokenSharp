@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TiktokenSharp.Model;
 using TiktokenSharp.Services;
+using TiktokenSharp.Utils;
 
 namespace TiktokenSharp
 {
@@ -32,10 +33,6 @@ namespace TiktokenSharp
             return new TikToken(setting);
         }
 
-
-        
-
-
         /// <summary>
         /// get encoding with encoding name
         /// </summary>
@@ -47,7 +44,6 @@ namespace TiktokenSharp
             var setting = EncodingManager.Instance.GetEncodingSetting(encodingName);
             return new TikToken(setting);
         }
-
 
         /// <summary>
         /// get encoding with modelName
@@ -73,12 +69,6 @@ namespace TiktokenSharp
             return new TikToken(setting);
         }
 
-        public static Regex SpecialTokenRegex(HashSet<string> tokens)
-        {
-            var inner = string.Join("|", tokens.Select(Regex.Escape));
-            return new Regex($"({inner})");
-        }
-
         private CoreBPE _corePBE;
 
         private EncodingSettingModel _setting;
@@ -95,42 +85,15 @@ namespace TiktokenSharp
             _setting = setting;
         }
 
-        public HashSet<string> SpecialTokensSet()
+        public List<int> Encode(string text, HashSet<string> allowedSpecial = null, HashSet<string> disallowedSpecial = null)
         {
-            return new HashSet<string>(_setting.SpecialTokens.Keys);
-        }
-
-        public List<int> Encode(string text, object allowedSpecial = null, object disallowedSpecial = null)
-        {
-            if (allowedSpecial == null)
-            {
-                allowedSpecial = new HashSet<string>();
-            }
-            if (disallowedSpecial == null)
-            {
-                disallowedSpecial = "all";
-            }
-
-            var allowedSpecialSet = allowedSpecial.Equals("all") ? SpecialTokensSet() : new HashSet<string>((IEnumerable<string>)allowedSpecial);
-            var disallowedSpecialSet = disallowedSpecial.Equals("all") ? new HashSet<string>(SpecialTokensSet().Except(allowedSpecialSet)) : new HashSet<string>((IEnumerable<string>)disallowedSpecial);
-
-            if (disallowedSpecialSet.Count() > 0)
-            {
-                var specialTokenRegex = SpecialTokenRegex(disallowedSpecialSet);
-                var match = specialTokenRegex.Match(text);
-                if (match.Success)
-                {
-                    throw new Exception(match.Value);
-                }
-            }
-
-            return _corePBE.EncodeNative(text, allowedSpecialSet).Item1;
+            return _corePBE.EncodeNative(text, allowedSpecial, disallowedSpecial).Item1;
         }
 
         public string Decode(List<int> tokens)
         {
             var ret = _corePBE.DecodeNative(tokens.ToArray());
-            string str = Encoding.UTF8.GetString(ret.ToArray());
+            string str = ByteHelper.ConvertByteListToString(ret);
             return str;
         }
 

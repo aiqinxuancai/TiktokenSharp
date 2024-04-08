@@ -13,16 +13,16 @@ namespace TiktokenSharp
         private Dictionary<string, int> _specialTokensEncoder { get; set; }
 
         // TODO private max_token_value ??
-        private Dictionary<byte[], int> _encoder { get; set; }
+        private Dictionary<ReadOnlyMemory<byte>, int> _encoder { get; set; }
 
         private Regex _specialRegex { get; set; }
 
         private Regex _regex { get; set; }
 
 
-        private Lazy<Dictionary<int, byte[]>> _lazyDecoder;
+        private Lazy<Dictionary<int, ReadOnlyMemory<byte>>> _lazyDecoder;
 
-        private Dictionary<int, byte[]> Decoder => _lazyDecoder.Value;
+        private Dictionary<int, ReadOnlyMemory<byte>> Decoder => _lazyDecoder.Value;
 
 
         private Dictionary<int, string> _specialTokensDecoder { get; set; }
@@ -34,14 +34,14 @@ namespace TiktokenSharp
         /// <param name="encoder"></param>
         /// <param name="specialTokensEncoder"></param>
         /// <param name="pattern"></param>
-        public CoreBPE(Dictionary<byte[], int> encoder, Dictionary<string, int> specialTokensEncoder, string pattern)
+        public CoreBPE(Dictionary<ReadOnlyMemory<byte>, int> encoder, Dictionary<string, int> specialTokensEncoder, string pattern)
         {
             _encoder = encoder;
             _regex = new Regex(pattern, RegexOptions.Compiled);
             _specialRegex = new Regex(string.Join("|", specialTokensEncoder.Keys.Select(s => Regex.Escape(s))), RegexOptions.Compiled);
             _specialTokensEncoder = specialTokensEncoder;
 
-            _lazyDecoder = new Lazy<Dictionary<int, byte[]>>(() =>
+            _lazyDecoder = new Lazy<Dictionary<int, ReadOnlyMemory<byte>>>(() =>
             {
                 var decoder = _encoder.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
 
@@ -59,7 +59,7 @@ namespace TiktokenSharp
         }
 
 #if NET7_0_OR_GREATER
-        public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial)
+        public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
         {
             Regex specialRegex = _specialRegex;
             Regex regex = _regex;
@@ -69,7 +69,8 @@ namespace TiktokenSharp
             int lastPieceTokenLen = 0;
             int currentIndex = 0;
 
-            var enumerator = specialRegex.EnumerateMatches(text);
+            var enumerator = specialRegex.EnumerateMatches(textSpan);
+
 
             while (currentIndex < text.Length)
             {
@@ -78,10 +79,18 @@ namespace TiktokenSharp
                 if (enumerator.MoveNext())
                 {
                     var current = enumerator.Current;
-                    if (allowedSpecial.Contains(textSpan.Slice(current.Index, current.Length).ToString()))
+
+                    var currentText = textSpan.Slice(current.Index, current.Length).ToString();
+
+                    if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
+                    {
+                        throw new InvalidOperationException(currentText);
+                    }
+                    if (allowedSpecial != null && allowedSpecial.Contains(currentText))
                     {
                         nextMatchStart = current.Index;
                     }
+
                 }
 
                 ReadOnlySpan<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
@@ -120,7 +129,7 @@ namespace TiktokenSharp
         }
 
 #else 
-        public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial)
+        public (List<int>, int) EncodeNative(string text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
         {
             Regex specialRegex = _specialRegex;
             Regex regex = _regex;
@@ -136,7 +145,16 @@ namespace TiktokenSharp
                 {
                     nextSpecial = specialRegex.Match(text, startFind);
                     if (!nextSpecial.Success) break;
-                    if (allowedSpecial.Contains(text.Substring(nextSpecial.Index, nextSpecial.Length))) break;
+                    var currentText = text.Substring(nextSpecial.Index, nextSpecial.Length);
+
+                    if (allowedSpecial != null && allowedSpecial.Contains(currentText))
+                    {
+                        break;
+                    }
+                    if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
+                    {
+                        throw new InvalidOperationException(currentText);
+                    }
                     startFind = nextSpecial.Index + 1;
                 }
                 int end = nextSpecial.Success ? nextSpecial.Index : text.Length;
@@ -174,12 +192,12 @@ namespace TiktokenSharp
 #endif
 
 
-        public byte[] DecodeNative(int[] tokens)
+        public List<ReadOnlyMemory<byte>> DecodeNative(int[] tokens)
         {
-            var ret = new List<byte>(tokens.Length * 2);
+            var ret = new List<ReadOnlyMemory<byte>>(tokens.Length * 2);
             foreach (var token in tokens)
             {
-                byte[] tokenBytes = { };
+                ReadOnlyMemory<byte> tokenBytes = new ReadOnlyMemory<byte>();
                 if (Decoder.TryGetValue(token, out var value))
                 {
                     tokenBytes = value;
@@ -194,10 +212,10 @@ namespace TiktokenSharp
 
                 if (tokenBytes.Length > 0)
                 {
-                    ret.AddRange(tokenBytes);
+                    ret.Add(tokenBytes);
                 } 
             }
-            return ret.ToArray();
+            return ret;
         }
     }
 }
