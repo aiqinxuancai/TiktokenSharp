@@ -88,7 +88,7 @@ public int TiktokenSharp()
 ## Update
 
 ### 1.1.0 20240408
-* Optimize algorithm efficiency.
+* **Optimize algorithm efficiency**.
 
 ### 1.0.9 20240208
 * Adding support for new OpenAI embeddings. by @winzig
