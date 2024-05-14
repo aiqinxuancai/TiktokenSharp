@@ -223,6 +223,10 @@ namespace TiktokenSharp.Services
                         {
                             return await cl100k_base();
                         }
+                    case "o200k_base":
+                        {
+                            return await o200k_base();
+                        }
                     default:
                         throw new NotImplementedException();
                 }
