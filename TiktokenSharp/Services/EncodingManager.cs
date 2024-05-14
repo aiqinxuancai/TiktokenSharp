@@ -90,20 +90,23 @@ namespace TiktokenSharp.Services
         /// <returns></returns>
         public EncodingSettingModel GetEncodingSetting(string modelOrEncodingName)
         {
-            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key)).Value;
+            var encodingName = "";
 
-            if (string.IsNullOrEmpty(encodingName))
+
+            if (MODEL_TO_ENCODING.Any(a => a.Value == modelOrEncodingName))
             {
-                encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value;
+                //modelOrEncodingName is encoding name?
+                encodingName = modelOrEncodingName;
+            }
+
+            if (MODEL_TO_ENCODING.ContainsKey(modelOrEncodingName))
+            {
+                encodingName = MODEL_TO_ENCODING[modelOrEncodingName];
             }
 
             if (string.IsNullOrEmpty(encodingName))
             {
-                if (MODEL_TO_ENCODING.Any(a => a.Value == modelOrEncodingName))
-                {
-                    //modelOrEncodingName is encoding name
-                    encodingName = modelOrEncodingName;
-                }
+                encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value; //MODEL_TO_ENCODING.FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key)).Value;
             }
 
             return GetEncoding(encodingName);
