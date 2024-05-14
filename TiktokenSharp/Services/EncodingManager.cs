@@ -35,7 +35,7 @@ namespace TiktokenSharp.Services
                                                             {
                                                             // chat
                                                             { "gpt-4", "cl100k_base" },
-                                                            { "gpt-4o", "cl100k_base" },
+                                                            { "gpt-4o", "o200k_base" },
                                                             { "gpt-3.5-turbo", "cl100k_base" },
                                                             { "gpt-3.5-turbo-16k", "cl100k_base" },
 
@@ -168,6 +168,12 @@ namespace TiktokenSharp.Services
                         {
                             return cl100k_base().Result;
                         }
+                    case "o200k_base":
+                        {
+                            return o200k_base().Result;
+                        }
+
+                        
                     default:
                         throw new NotImplementedException();
                 }
@@ -328,6 +334,39 @@ namespace TiktokenSharp.Services
             {
                 Name = "cl100k_base",
                 PatStr = @"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+",
+                MergeableRanks = mergeable_ranks,
+                SpecialTokens = special_tokens
+            };
+        }
+
+
+        private async Task<EncodingSettingModel> o200k_base()
+        {
+            //When using the mod for the first time, the pbe file will be downloaded over the network.
+            var mergeable_ranks = await LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken");
+            var special_tokens = new Dictionary<string, int>{
+                                    { ENDOFTEXT, 199999},
+                                    { ENDOFPROMPT, 200018}
+                                };
+
+            string[] patterns = new string[]
+            {
+                @"[^\r\n\p{L}\p{N}]?[\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]*[\p{Ll}\p{Lm}\p{Lo}\p{M}]+(?i:'s|'t|'re|'ve|'m|'ll|'d)?",
+                @"[^\r\n\p{L}\p{N}]?[\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]+[\p{Ll}\p{Lm}\p{Lo}\p{M}]*(?i:'s|'t|'re|'ve|'m|'ll|'d)?",
+                @"\p{N}{1,3}",
+                @" ?[^\s\p{L}\p{N}]+[\r\n/]*",
+                @"\s*[\r\n]+",
+                @"\s+(?!\S)",
+                @"\s+",
+            };
+
+            string patStr = string.Join("|", patterns);
+
+
+            return new EncodingSettingModel()
+            {
+                Name = "o200k_base",
+                PatStr = patStr,
                 MergeableRanks = mergeable_ranks,
                 SpecialTokens = special_tokens
             };
