@@ -88,8 +88,8 @@ public int TiktokenSharp()
 
 ## Update
 
-### 1.1.2 20240514
-* Support gpt-4o(o200k_base).
+### 1.1.4 20240514
+* Add Support gpt-4o(o200k_base).
 
 ### 1.1.0 20240408
 * **Optimize algorithm efficiency**.
