@@ -33,6 +33,7 @@ If you are deploying cloud functions, such as "Azure App Service," which cannot 
 Below are the file download links:
 [p50k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken)
 [cl100k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken)
+[o200k_base.tiktoken](https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken)
 
 ## Benchmark Test
 
