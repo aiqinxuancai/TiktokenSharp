@@ -1,10 +1,6 @@
 # TiktokenSharp
 
-Due to the lack of a C# version of `cl100k_base` encoding (gpt-3.5-turbo), I have implemented a basic solution with encoding and decoding methods based on the official Rust implementation.
-
-Currently, `o200k_base` `cl100k_base` `p50k_base` has been implemented. Other encodings will be added in future submissions. If you encounter any issues or have questions, please feel free to submit them on the `lssues`."
-
-If you want to use the ChatGPT C# library that integrates this repository and implements context-based conversation, please visit [ChatGPTSharp](https://github.com/aiqinxuancai/ChatGPTSharp).
+This library is a C# implementation of the token count calculation, referencing OpenAI's official Rust language version. Currently, the encoding algorithms for `o200k_base`, `cl100k_base`, and `p50k_base` have been implemented. You can directly obtain the corresponding encoding algorithm using the model name.
 
 ## Getting Started
 
@@ -83,10 +79,14 @@ public int TiktokenSharp()
 
 |        Method |      Job |  Runtime |      Mean |    Error |   StdDev |      Gen0 |  Allocated |
 |-------------- |--------- |--------- |----------:|---------:|---------:|----------:|-----------:|
-|    SharpToken | .NET 8.0 | .NET 8.0 | 116.38 ms | 1.026 ms | 0.909 ms | 2000.0000 | 23201696 B |
 | TiktokenSharp | .NET 8.0 | .NET 8.0 |  98.34 ms | 0.198 ms | 0.176 ms | 9833.3333 | 82321080 B |
+|    SharpToken | .NET 8.0 | .NET 8.0 | 116.38 ms | 1.026 ms | 0.909 ms | 2000.0000 | 23201696 B |
+
 
 ## Update
+
+### 1.1.5 20240913
+* Add Support o1 models(o200k_base).
 
 ### 1.1.4 20240514
 * Add Support gpt-4o(o200k_base).

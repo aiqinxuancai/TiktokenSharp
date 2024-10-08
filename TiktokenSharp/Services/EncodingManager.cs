@@ -33,9 +33,16 @@ namespace TiktokenSharp.Services
 
         static Dictionary<string, string> MODEL_TO_ENCODING = new Dictionary<string, string>()
                                                             {
+
+                                                            // chat o1
+                                                            { "o1", "o200k_base" },
+                                                            { "o1-preview", "o200k_base" }, // Auto match o1-preview-{date}
+                                                            { "o1-mini", "o200k_base" },  // Auto match o1-mini-{date}
+
                                                             // chat
                                                             { "gpt-4", "cl100k_base" },
                                                             { "gpt-4o", "o200k_base" },
+                                                            { "gpt-4o-mini", "o200k_base" },
                                                             { "gpt-3.5-turbo", "cl100k_base" },
                                                             { "gpt-3.5-turbo-16k", "cl100k_base" },
 
