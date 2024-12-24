@@ -25,7 +25,7 @@ namespace TiktokenSharp.Test
 
         static void GPT4o()
         {
-            TikToken tikToken = TikToken.EncodingForModel("gpt-4o");
+            TikToken tikToken = TikToken.EncodingForModel("gpt-4o-vision");
             //TikToken tikToken = TikToken.GetEncoding("o200k_base");
             var i = tikToken.Encode("hello world");
             var d = tikToken.Decode(i);

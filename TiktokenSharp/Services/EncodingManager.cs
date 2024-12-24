@@ -39,6 +39,8 @@ namespace TiktokenSharp.Services
                                                             { "o1-preview", "o200k_base" }, // Auto match o1-preview-{date}
                                                             { "o1-mini", "o200k_base" },  // Auto match o1-mini-{date}
 
+                                                            //gpt-4-vision-preview
+
                                                             // chat
                                                             { "gpt-4", "cl100k_base" },
                                                             { "gpt-4o", "o200k_base" },
@@ -106,7 +108,7 @@ namespace TiktokenSharp.Services
                 encodingName = modelOrEncodingName;
             }
 
-            if (MODEL_TO_ENCODING.ContainsKey(modelOrEncodingName))
+            if (string.IsNullOrEmpty(encodingName) && MODEL_TO_ENCODING.ContainsKey(modelOrEncodingName))
             {
                 encodingName = MODEL_TO_ENCODING[modelOrEncodingName];
             }
@@ -114,6 +116,14 @@ namespace TiktokenSharp.Services
             if (string.IsNullOrEmpty(encodingName))
             {
                 encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value; //MODEL_TO_ENCODING.FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key)).Value;
+            }
+
+            if (string.IsNullOrEmpty(encodingName))
+            {
+                encodingName = MODEL_TO_ENCODING
+                    .OrderByDescending(x => x.Key.Length)
+                    .FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key))
+                    .Value;
             }
 
             return GetEncoding(encodingName);

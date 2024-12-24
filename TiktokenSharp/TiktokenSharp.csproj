@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>.net8;.net7;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>.net9;.net8;.net7;netstandard2.1;netstandard2.0</TargetFrameworks>
 	<LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-	<Description>Token calculation for OpenAI gpt-3.5-turbo;gpt-4;gpt-4o models.</Description>
+	<Description>Token calculation for OpenAI gpt-3.5-turbo;gpt-4;gpt-4o;o1 models.</Description>
 	<PackageProjectUrl>https://github.com/aiqinxuancai/TiktokenSharp</PackageProjectUrl>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<RepositoryUrl>https://github.com/aiqinxuancai/TiktokenSharp</RepositoryUrl>
 	<PackageTags>chatgpt;openai</PackageTags>
 	<Title>TiktokenSharp</Title>
-	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.5</VersionPrefix>
+	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.6</VersionPrefix>
 	<Authors>aiqinxuancai</Authors>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
