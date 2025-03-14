@@ -14,6 +14,13 @@ using TiktokenSharp.Utils;
 
 namespace TiktokenSharp
 {
+    public enum SpecialTokensMode
+    {
+        None,       
+        All,        
+        Custom      
+    }
+
     public class TikToken
     {
 
@@ -93,42 +100,58 @@ namespace TiktokenSharp
             _setting = setting;
         }
 
-        public List<int> Encode(string text, HashSet<string> allowedSpecial = null, HashSet<string> disallowedSpecial = null)
+        public List<int> Encode(string text,
+            HashSet<string> allowedSpecial = null,
+            HashSet<string> disallowedSpecial = null,
+            SpecialTokensMode allowedSpecialMode = SpecialTokensMode.Custom,
+            SpecialTokensMode disallowedSpecialMode = SpecialTokensMode.Custom)
         {
-//#if NET7_0_OR_GREATER
-//            HashSet<ReadOnlyMemory<char>>? allowedSpecialMemory = null;
-//            HashSet<ReadOnlyMemory<char>>? disallowedSpecialMemory = null;
+            HashSet<string> effectiveAllowed;
+            if (allowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveAllowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+            }
+            else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
+            {
+                effectiveAllowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveAllowed = allowedSpecial;
+            }
 
-//#else
-//            List<ReadOnlyMemory<char>>? allowedSpecialMemory = null;
-//            List<ReadOnlyMemory<char>>? disallowedSpecialMemory = null;
-//#endif
-//            if (allowedSpecial != null)
-//            {
-//                allowedSpecialMemory = allowedSpecial
-//                    .Select(str => (ReadOnlyMemory<char>)str.AsMemory())
-//#if NET7_0_OR_GREATER
-//                    .ToHashSet();
-//#else
-//                    .ToList();
-//#endif
-//            }
+            HashSet<string> effectiveDisallowed;
+            if (disallowedSpecialMode == SpecialTokensMode.All)
+            {
+                // py: disallowed_special = self.special_tokens_set - allowed_special
+                effectiveDisallowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+                effectiveDisallowed.ExceptWith(effectiveAllowed);
+            }
+            else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
+            {
+                effectiveDisallowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveDisallowed = disallowedSpecial;
+            }
 
-//            if (disallowedSpecial != null )
-//            {
-//                var disallowedSpecialMemcpy = disallowedSpecial
-//                    .Select(str => (ReadOnlyMemory<char>)str.AsMemory())
-//#if NET7_0_OR_GREATER
-//                    .ToHashSet();
-//#else
-//                    .ToList();
-//#endif
-//            }
+            return _corePBE.EncodeNative(text, effectiveAllowed, effectiveDisallowed).Item1;
+        }
 
-            
+        public List<int> EncodeWithAllSpecialAllowed(string text)
+        {
+            return Encode(text, allowedSpecialMode: SpecialTokensMode.All, disallowedSpecialMode: SpecialTokensMode.None);
+        }
 
+        public List<int> EncodeWithNoSpecialChecks(string text)
+        {
+            return Encode(text, allowedSpecialMode: SpecialTokensMode.None, disallowedSpecialMode: SpecialTokensMode.None);
+        }
 
-            return _corePBE.EncodeNative(text, allowedSpecial, disallowedSpecial).Item1;
+        public List<int> EncodeDefault(string text)
+        {
+            return Encode(text);
         }
 
         public string Decode(List<int> tokens)

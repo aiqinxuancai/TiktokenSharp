@@ -86,6 +86,9 @@ public int TiktokenSharp()
 
 ## Update
 
+### 1.1.7 20250314
+* Add Support o3 models.
+
 ### 1.1.6 20241224
 * Optimize model name matching encoding.
 

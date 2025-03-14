@@ -31,126 +31,149 @@ namespace TiktokenSharp.Services
         const string FIM_SUFFIX = "<|fim_suffix|>";
         const string ENDOFPROMPT = "<|endofprompt|>";
 
-        static Dictionary<string, string> MODEL_TO_ENCODING = new Dictionary<string, string>()
-                                                            {
 
-                                                            // chat o1
-                                                            { "o1", "o200k_base" },
-                                                            { "o1-preview", "o200k_base" }, // Auto match o1-preview-{date}
-                                                            { "o1-mini", "o200k_base" },  // Auto match o1-mini-{date}
+        private static readonly Dictionary<string, string> MODEL_PREFIX_TO_ENCODING = new Dictionary<string, string>()
+        {
+            { "o1-", "o200k_base" },
+            { "o3-", "o200k_base" },
+            // chat
+            { "chatgpt-4o-", "o200k_base" },
+            { "gpt-4o-", "o200k_base" },  // e.g., gpt-4o-2024-05-13
+            { "gpt-4-", "cl100k_base" },  // e.g., gpt-4-0314, etc., plus gpt-4-32k
+            { "gpt-3.5-turbo-", "cl100k_base" },  // e.g, gpt-3.5-turbo-0301, -0401, etc.
+            { "gpt-35-turbo-", "cl100k_base" },  // Azure deployment name
+            // fine-tuned
+            { "ft:gpt-4o", "o200k_base" },
+            { "ft:gpt-4", "cl100k_base" },
+            { "ft:gpt-3.5-turbo", "cl100k_base" },
+            { "ft:davinci-002", "cl100k_base" },
+            { "ft:babbage-002", "cl100k_base" },
+        };
 
-                                                            //gpt-4-vision-preview
 
-                                                            // chat
-                                                            { "gpt-4", "cl100k_base" },
-                                                            { "gpt-4o", "o200k_base" },
-                                                            { "gpt-4o-mini", "o200k_base" },
-                                                            { "gpt-3.5-turbo", "cl100k_base" },
-                                                            { "gpt-3.5-turbo-16k", "cl100k_base" },
+        private static readonly Dictionary<string, string> MODEL_TO_ENCODING = new Dictionary<string, string>()
+        {
+            // reasoning
+            { "o1", "o200k_base" },
+            { "o3", "o200k_base" },
+            // chat
+            { "gpt-4o", "o200k_base" },
+            { "gpt-4", "cl100k_base" },
+            { "gpt-3.5-turbo", "cl100k_base" },
+            { "gpt-3.5", "cl100k_base" },  // Common shorthand
+            { "gpt-35-turbo", "cl100k_base" },  // Azure deployment name
+            // base
+            { "davinci-002", "cl100k_base" },
+            { "babbage-002", "cl100k_base" },
+            // embeddings
+            { "text-embedding-ada-002", "cl100k_base" },
+            { "text-embedding-3-small", "cl100k_base" },
+            { "text-embedding-3-large", "cl100k_base" },
+            // DEPRECATED MODELS
+            // text (DEPRECATED)
+            { "text-davinci-003", "p50k_base" },
+            { "text-davinci-002", "p50k_base" },
+            { "text-davinci-001", "r50k_base" },
+            { "text-curie-001", "r50k_base" },
+            { "text-babbage-001", "r50k_base" },
+            { "text-ada-001", "r50k_base" },
+            { "davinci", "r50k_base" },
+            { "curie", "r50k_base" },
+            { "babbage", "r50k_base" },
+            { "ada", "r50k_base" },
+            // code (DEPRECATED)
+            { "code-davinci-002", "p50k_base" },
+            { "code-davinci-001", "p50k_base" },
+            { "code-cushman-002", "p50k_base" },
+            { "code-cushman-001", "p50k_base" },
+            { "davinci-codex", "p50k_base" },
+            { "cushman-codex", "p50k_base" },
+            // edit (DEPRECATED)
+            { "text-davinci-edit-001", "p50k_edit" },
+            { "code-davinci-edit-001", "p50k_edit" },
+            // old embeddings (DEPRECATED)
+            { "text-similarity-davinci-001", "r50k_base" },
+            { "text-similarity-curie-001", "r50k_base" },
+            { "text-similarity-babbage-001", "r50k_base" },
+            { "text-similarity-ada-001", "r50k_base" },
+            { "text-search-davinci-doc-001", "r50k_base" },
+            { "text-search-curie-doc-001", "r50k_base" },
+            { "text-search-babbage-doc-001", "r50k_base" },
+            { "text-search-ada-doc-001", "r50k_base" },
+            { "code-search-babbage-code-001", "r50k_base" },
+            { "code-search-ada-code-001", "r50k_base" },
+            // open source
+            { "gpt2", "gpt2" },
+            { "gpt-2", "gpt2" },  // Maintains consistency with gpt-4
+        };
 
-                                                            // text
-                                                            { "text-davinci-003", "p50k_base" },
-                                                            { "text-davinci-002", "p50k_base" },
-                                                            { "text-davinci-001", "r50k_base" },
-                                                            { "text-curie-001", "r50k_base" },
-                                                            { "text-babbage-001", "r50k_base" },
-                                                            { "text-ada-001", "r50k_base" },
-                                                            { "davinci", "r50k_base" },
-                                                            { "curie", "r50k_base" },
-                                                            { "babbage", "r50k_base" },
-                                                            { "ada", "r50k_base" },
-                                                            // code
-                                                            { "code-davinci-002", "p50k_base" },
-                                                            { "code-davinci-001", "p50k_base" },
-                                                            { "code-cushman-002", "p50k_base" },
-                                                            { "code-cushman-001", "p50k_base" },
-                                                            { "davinci-codex", "p50k_base" },
-                                                            { "cushman-codex", "p50k_base" },
-                                                            // edit
-                                                            { "text-davinci-edit-001", "p50k_edit" },
-                                                            { "code-davinci-edit-001", "p50k_edit" },
-                                                            // embeddings
-                                                            { "text-embedding-ada-002", "cl100k_base" },
-                                                            { "text-embedding-3-large", "cl100k_base" },
-                                                            { "text-embedding-3-small", "cl100k_base" },
-                                                            // old embeddings
-                                                            { "text-similarity-davinci-001", "r50k_base" },
-                                                            { "text-similarity-curie-001", "r50k_base" },
-                                                            { "text-similarity-babbage-001", "r50k_base" },
-                                                            { "text-similarity-ada-001", "r50k_base" },
-                                                            { "text-search-davinci-doc-001", "r50k_base" },
-                                                            { "text-search-curie-doc-001", "r50k_base" },
-                                                            { "text-search-babbage-doc-001", "r50k_base" },
-                                                            { "text-search-ada-doc-001", "r50k_base" },
-                                                            { "code-search-babbage-code-001", "r50k_base" },
-                                                            { "code-search-ada-code-001", "r50k_base" },
-                                                            // open source
-                                                            { "gpt2", "gpt2" }
-                                                        };
         EncodingManager()
         {
 
         }
+        /// <summary>
+        /// Gets the encoding name for the specified model.
+        /// </summary>
+        /// <param name="modelName">The model name</param>
+        /// <returns>The encoding name</returns>
+        /// <exception cref="KeyNotFoundException">Thrown when the model cannot be mapped to an encoding</exception>
+        private string GetEncodingNameForModel(string modelName)
+        {
+            if (string.IsNullOrEmpty(modelName))
+            {
+                throw new ArgumentNullException(nameof(modelName), "Model name cannot be null or empty");
+            }
+
+            // 1. Check if the input is already an encoding name
+            if (MODEL_TO_ENCODING.Values.Contains(modelName))
+            {
+                return modelName;
+            }
+
+            // 2. Check if the model exists in the direct mapping
+            if (MODEL_TO_ENCODING.TryGetValue(modelName, out string encodingName))
+            {
+                return encodingName;
+            }
+
+            // 3. Check if the model name matches any known prefix
+            foreach (var prefix in MODEL_PREFIX_TO_ENCODING)
+            {
+                if (modelName.StartsWith(prefix.Key))
+                {
+                    return prefix.Value;
+                }
+            }
+
+            // If no match is found, throw an exception
+            throw new KeyNotFoundException(
+                $"Could not automatically map {modelName} to a tokeniser. " +
+                "Please use explicit encoding name."
+            );
+        }
 
         /// <summary>
-        /// Get encoding setting with model name.
+        /// Gets the encoding settings for the specified model or encoding name.
         /// </summary>
-        /// <param name="modelName">gpt-4 gpt-3.5-turbo ...</param>
-        /// <returns></returns>
+        /// <param name="modelOrEncodingName">The model name or encoding name</param>
+        /// <returns>The encoding setting model</returns>
         public EncodingSettingModel GetEncodingSetting(string modelOrEncodingName)
         {
-            var encodingName = "";
-
-
-            if (MODEL_TO_ENCODING.Any(a => a.Value == modelOrEncodingName))
-            {
-                //modelOrEncodingName is encoding name?
-                encodingName = modelOrEncodingName;
-            }
-
-            if (string.IsNullOrEmpty(encodingName) && MODEL_TO_ENCODING.ContainsKey(modelOrEncodingName))
-            {
-                encodingName = MODEL_TO_ENCODING[modelOrEncodingName];
-            }
-
-            if (string.IsNullOrEmpty(encodingName))
-            {
-                encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value; //MODEL_TO_ENCODING.FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key)).Value;
-            }
-
-            if (string.IsNullOrEmpty(encodingName))
-            {
-                encodingName = MODEL_TO_ENCODING
-                    .OrderByDescending(x => x.Key.Length)
-                    .FirstOrDefault(a => modelOrEncodingName.StartsWith(a.Key))
-                    .Value;
-            }
-
+            string encodingName = GetEncodingNameForModel(modelOrEncodingName);
             return GetEncoding(encodingName);
         }
 
         /// <summary>
-        /// Get encoding setting with model name.
+        /// Asynchronously gets the encoding settings for the specified model or encoding name.
         /// </summary>
-        /// <param name="modelName">gpt-4 gpt-3.5-turbo ...</param>
-        /// <returns></returns>
+        /// <param name="modelOrEncodingName">The model name or encoding name</param>
+        /// <returns>A task containing the encoding setting model</returns>
         public async Task<EncodingSettingModel> GetEncodingSettingAsync(string modelOrEncodingName)
         {
-            var encodingName = MODEL_TO_ENCODING.FirstOrDefault(a => a.Key.StartsWith(modelOrEncodingName)).Value;
-
-            if (string.IsNullOrEmpty(encodingName))
-            {
-                if (MODEL_TO_ENCODING.Any(a => a.Value == modelOrEncodingName))
-                {
-                    //modelOrEncodingName is encoding name
-                    encodingName = modelOrEncodingName;
-                }
-            }
-
+            string encodingName = GetEncodingNameForModel(modelOrEncodingName);
             return await GetEncodingAsync(encodingName);
         }
 
-        
 
 
 
@@ -193,7 +216,7 @@ namespace TiktokenSharp.Services
                             return o200k_base().Result;
                         }
 
-                        
+
                     default:
                         throw new NotImplementedException();
                 }
