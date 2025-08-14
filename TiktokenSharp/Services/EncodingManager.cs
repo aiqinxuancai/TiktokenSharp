@@ -36,7 +36,11 @@ namespace TiktokenSharp.Services
         {
             { "o1-", "o200k_base" },
             { "o3-", "o200k_base" },
+            { "o4-mini-", "o200k_base" },
             // chat
+            { "gpt-5-", "o200k_base" },
+            { "gpt-4.5-", "o200k_base" },
+            { "gpt-4.1-", "o200k_base" },
             { "chatgpt-4o-", "o200k_base" },
             { "gpt-4o-", "o200k_base" },  // e.g., gpt-4o-2024-05-13
             { "gpt-4-", "cl100k_base" },  // e.g., gpt-4-0314, etc., plus gpt-4-32k
@@ -56,7 +60,12 @@ namespace TiktokenSharp.Services
             // reasoning
             { "o1", "o200k_base" },
             { "o3", "o200k_base" },
+            { "o4-mini", "o200k_base" },
+
             // chat
+            { "gpt-5", "o200k_base" },
+            { "gpt-4.5", "o200k_base" },
+            { "gpt-4.1", "o200k_base" },
             { "gpt-4o", "o200k_base" },
             { "gpt-4", "cl100k_base" },
             { "gpt-3.5-turbo", "cl100k_base" },

@@ -86,6 +86,9 @@ public int TiktokenSharp()
 
 ## Update
 
+### 1.1.5 20250814
+* Add Support gpt-5 models.
+
 ### 1.1.7 20250314
 * Add Support o3 models.
 
