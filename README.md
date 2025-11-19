@@ -33,7 +33,6 @@ Below are the file download links:
 
 ## Benchmark Test
 
-I noticed that some users would like to get a comparison of efficiency. Here, I use SharpToken as the basic comparison, with the encoder cl100k_base, on the .Net 6.0 in Debug mode.
 * TiktokenSharp Version: 1.2.0 
 * SharpToken Version: 2.0.1
 
