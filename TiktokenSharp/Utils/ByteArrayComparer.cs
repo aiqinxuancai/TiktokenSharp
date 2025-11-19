@@ -6,6 +6,7 @@ using System.Text;
 namespace TiktokenSharp.Utils
 {
 
+
     internal class ReadOnlyMemoryComparer : IEqualityComparer<ReadOnlyMemory<byte>>
     {
         public bool Equals(ReadOnlyMemory<byte> x, ReadOnlyMemory<byte> y)
@@ -27,6 +28,7 @@ namespace TiktokenSharp.Utils
             }
         }
     }
+
 
     internal class ByteArrayComparer : IEqualityComparer<byte[]>
     {

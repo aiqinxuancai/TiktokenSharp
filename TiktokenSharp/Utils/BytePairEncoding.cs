@@ -1,10 +1,72 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
 namespace TiktokenSharp.Utils
 {
+    // Pool for reusing List<(int, int)> to avoid allocations in BytePairEncode
+    internal static class PartsListPool
+    {
+        [ThreadStatic]
+        private static List<(int Start, int Rank)> t_cachedList;
+
+        public static List<(int Start, int Rank)> Rent(int capacity)
+        {
+            var list = t_cachedList;
+            if (list != null)
+            {
+                t_cachedList = null;
+                list.Clear();
+                if (list.Capacity < capacity)
+                {
+                    list.Capacity = capacity;
+                }
+                return list;
+            }
+            return new List<(int Start, int Rank)>(capacity);
+        }
+
+        public static void Return(List<(int Start, int Rank)> list)
+        {
+            if (list != null && list.Capacity <= 256) // Don't cache very large lists
+            {
+                t_cachedList = list;
+            }
+        }
+    }
+
+    // Pool for reusing List<ReadOnlyMemory<byte>> in DecodeNative
+    internal static class ByteMemoryListPool
+    {
+        [ThreadStatic]
+        private static List<ReadOnlyMemory<byte>> t_cachedList;
+
+        public static List<ReadOnlyMemory<byte>> Rent(int capacity)
+        {
+            var list = t_cachedList;
+            if (list != null)
+            {
+                t_cachedList = null;
+                list.Clear();
+                if (list.Capacity < capacity)
+                {
+                    list.Capacity = capacity;
+                }
+                return list;
+            }
+            return new List<ReadOnlyMemory<byte>>(capacity);
+        }
+
+        public static void Return(List<ReadOnlyMemory<byte>> list)
+        {
+            if (list != null && list.Capacity <= 512) // Don't cache very large lists
+            {
+                t_cachedList = list;
+            }
+        }
+    }
 
     internal class BytePairEncoding
     {
@@ -157,6 +219,155 @@ namespace TiktokenSharp.Utils
             return BytePairMerge(pieceMemory, ranks, range => pieceMemory.Slice(range.Start.Value, range.End.Value - range.Start.Value).ToArray());
         }
 
+        public static int BytePairEncodeCount(byte[] piece, Dictionary<ReadOnlyMemory<byte>, int> ranks)
+        {
+            ReadOnlyMemory<byte> pieceMemory = piece;
+
+            if (piece.Length == 1)
+            {
+                return 1;
+            }
+
+            var parts = new List<(int Start, int Rank)>(piece.Length + 1);
+
+            for (int i = 0; i <= piece.Length; i++)
+            {
+                parts.Add((i, int.MaxValue));
+            }
+
+            int? GetRank(int startIdx, int skip = 0)
+            {
+                if (startIdx + skip + 2 < parts.Count)
+                {
+                    ReadOnlyMemory<byte> sliceMemory = pieceMemory.Slice(parts[startIdx].Item1, parts[startIdx + skip + 2].Item1 - parts[startIdx].Item1);
+                    if (ranks.TryGetValue(sliceMemory, out var rank))
+                    {
+                        return rank;
+                    }
+                }
+                return null;
+            }
+
+            for (int i = 0; i < parts.Count - 2; i++)
+            {
+                var rank = GetRank(i);
+                if (rank != null)
+                {
+                    parts[i] = (parts[i].Start, rank.Value);
+                }
+            }
+
+            while (parts.Count > 1)
+            {
+                var minRank = (Rank: int.MaxValue, Index: 0);
+                for (int i = 0; i < parts.Count - 1; i++)
+                {
+                    if (parts[i].Rank < minRank.Rank)
+                    {
+                        minRank = (parts[i].Rank, i);
+                    }
+                }
+                if (minRank.Rank != int.MaxValue)
+                {
+                    int i = minRank.Index;
+                    parts[i] = (parts[i].Start, GetRank(i, 1) ?? int.MaxValue);
+                    if (i > 0)
+                    {
+                        parts[i - 1] = (parts[i - 1].Start, GetRank(i - 1, 1) ?? int.MaxValue);
+                    }
+                    parts.RemoveAt(i + 1);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return parts.Count - 1;
+        }
+
+        /// <summary>
+        /// Encodes bytes into tokens and adds them directly to the output list to avoid allocation
+        /// </summary>
+        public static void BytePairEncodeInto(ReadOnlyMemory<byte> pieceMemory, Dictionary<ReadOnlyMemory<byte>, int> ranks, List<int> output)
+        {
+            if (pieceMemory.Length == 1)
+            {
+                output.Add(ranks[pieceMemory]);
+                return;
+            }
+
+            // Rent from pool instead of allocating
+            var parts = PartsListPool.Rent(pieceMemory.Length + 1);
+
+            try
+            {
+                for (int i = 0; i <= pieceMemory.Length; i++)
+                {
+                    parts.Add((i, int.MaxValue));
+                }
+
+                int? GetRank(int startIdx, int skip = 0)
+                {
+                    if (startIdx + skip + 2 < parts.Count)
+                    {
+                        ReadOnlyMemory<byte> sliceMemory = pieceMemory.Slice(parts[startIdx].Item1, parts[startIdx + skip + 2].Item1 - parts[startIdx].Item1);
+                        if (ranks.TryGetValue(sliceMemory, out var rank))
+                        {
+                            return rank;
+                        }
+                    }
+                    return null;
+                }
+
+                for (int i = 0; i < parts.Count - 2; i++)
+                {
+                    var rank = GetRank(i);
+                    if (rank != null)
+                    {
+                        parts[i] = (parts[i].Start, rank.Value);
+                    }
+                }
+
+                while (parts.Count > 1)
+                {
+                    var minRank = (Rank: int.MaxValue, Index: 0);
+                    for (int i = 0; i < parts.Count - 1; i++)
+                    {
+                        if (parts[i].Rank < minRank.Rank)
+                        {
+                            minRank = (parts[i].Rank, i);
+                        }
+                    }
+                    if (minRank.Rank != int.MaxValue)
+                    {
+                        int i = minRank.Index;
+                        parts[i] = (parts[i].Start, GetRank(i, 1) ?? int.MaxValue);
+                        if (i > 0)
+                        {
+                            parts[i - 1] = (parts[i - 1].Start, GetRank(i - 1, 1) ?? int.MaxValue);
+                        }
+                        parts.RemoveAt(i + 1);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                // Add tokens directly to output list
+                for (int i = 0; i < parts.Count - 1; i++)
+                {
+                    var slice = pieceMemory.Slice(parts[i].Start, parts[i + 1].Start - parts[i].Start);
+                    output.Add(ranks[slice]);
+                }
+            }
+            finally
+            {
+                // Return to pool for reuse
+                PartsListPool.Return(parts);
+            }
+        }
 
     }
 

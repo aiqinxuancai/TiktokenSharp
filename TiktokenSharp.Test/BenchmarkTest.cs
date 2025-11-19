@@ -30,8 +30,9 @@ use RegexOptions.Compiled
      */
 
 
-    [SimpleJob(RuntimeMoniker.Net60)]
+    //[SimpleJob(RuntimeMoniker.Net60)]
     [SimpleJob(RuntimeMoniker.Net80)]
+    [SimpleJob(RuntimeMoniker.Net10_0)]
     //[SimpleJob(RuntimeMoniker.Net471)]
     //[RPlotExporter]
     [MemoryDiagnoser]

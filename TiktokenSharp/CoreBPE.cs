@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -31,6 +32,8 @@ namespace TiktokenSharp
 
         private Dictionary<int, string> _specialTokensDecoder { get; set; }
 
+        private Dictionary<int, ReadOnlyMemory<byte>> _specialTokensDecoderBytes { get; set; }
+
 
         /// <summary>
         /// CoreBPE
@@ -59,6 +62,8 @@ namespace TiktokenSharp
             });
 
             _specialTokensDecoder = specialTokensEncoder.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+            _specialTokensDecoderBytes = specialTokensEncoder.ToDictionary(kvp => kvp.Value, kvp => (ReadOnlyMemory<byte>)UTF8Encoding.UTF8.GetBytes(kvp.Key));
+
 
             var sortedTokenBytes = _encoder.Keys.ToList();
         }
@@ -73,76 +78,98 @@ namespace TiktokenSharp
             int currentIndex = 0;
 
             var enumerator = _specialRegex.EnumerateMatches(textSpan.Span);
+            // Use ArrayPool for all piece allocations to avoid per-match allocation
+            byte[] rentedPieceBuffer = ArrayPool<byte>.Shared.Rent(768);
 
-            while (currentIndex < text.Length)
+            try
             {
-                int nextMatchStart = text.Length;
-
-                if (enumerator.MoveNext())
+                while (currentIndex < text.Length)
                 {
-   
-                    var current = enumerator.Current;
-                    var currentText = textSpan.Slice(current.Index, current.Length).ToString();
+                    int nextMatchStart = text.Length;
 
-                    if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
+                    if (enumerator.MoveNext())
                     {
-                        throw new InvalidOperationException(currentText.ToString());
-                    }
-                    if (allowedSpecial != null && allowedSpecial.Contains(currentText))
-                    {
-                        nextMatchStart = current.Index;
+
+                        var current = enumerator.Current;
+                        var specialSpan = textSpan.Slice(current.Index, current.Length).Span;
+
+                        // Avoid ToString by checking special tokens directly if possible
+                        bool needsCheck = (disallowedSpecial != null && disallowedSpecial.Count > 0) ||
+                                         (allowedSpecial != null && allowedSpecial.Count > 0);
+
+                        if (needsCheck)
+                        {
+                            var currentText = specialSpan.ToString();
+                            if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
+                            {
+                                throw new InvalidOperationException(currentText);
+                            }
+                            if (allowedSpecial != null && allowedSpecial.Contains(currentText))
+                            {
+                                nextMatchStart = current.Index;
+                            }
+                        }
                     }
 
+                    ReadOnlyMemory<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
+                    foreach (var match in _regex.EnumerateMatches(currentSpan.Span))
+                    {
+                        var charSpan = currentSpan.Slice(match.Index, match.Length).Span;
+
+                        // Encode to UTF8 bytes
+                        int maxByteCount = charSpan.Length * 3;
+
+                        // Ensure rented buffer is large enough
+                        if (rentedPieceBuffer.Length < maxByteCount)
+                        {
+                            ArrayPool<byte>.Shared.Return(rentedPieceBuffer);
+                            rentedPieceBuffer = ArrayPool<byte>.Shared.Rent(maxByteCount);
+                        }
+
+                        int byteCount = Encoding.UTF8.GetBytes(charSpan, rentedPieceBuffer);
+                        ReadOnlyMemory<byte> piece = new ReadOnlyMemory<byte>(rentedPieceBuffer, 0, byteCount);
+
+                        if (_encoder.TryGetValue(piece, out int token))
+                        {
+                            lastPieceTokenLen = 1;
+                            ret.Add(token);
+                        }
+                        else
+                        {
+                            // Pass ReadOnlyMemory directly - no array copy needed!
+                            BytePairEncoding.BytePairEncodeInto(piece, _encoder, ret);
+                            lastPieceTokenLen = ret.Count; // Approximate
+                        }
+                    }
+
+                        currentIndex = nextMatchStart;
+
+                    if (currentIndex < text.Length)
+                    {
+                        var match = enumerator.Current;
+                        var pieceSpan = textSpan.Slice(currentIndex, match.Length).Span;
+
+                        // Try to avoid ToString for special token lookup
+                        if (_specialTokensEncoder.Count > 0)
+                        {
+                            var pieceStr = pieceSpan.ToString();
+                            if (_specialTokensEncoder.TryGetValue(pieceStr, out int token))
+                            {
+                                ret.Add(token);
+                                currentIndex += match.Length;
+                                lastPieceTokenLen = 0;
+                            }
+                        }
+                    }
                 }
 
-                //read only 
-
-                ReadOnlyMemory<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
-                foreach (var match in _regex.EnumerateMatches(currentSpan.Span))
-                {
-                    var charSpan = currentSpan.Slice(match.Index, match.Length);
-                    //var byteSpan = ByteHelper.ConvertReadOnlyMemoryCharToByte(charSpan);
-
-                    var piece = Encoding.UTF8.GetBytes(charSpan.ToString()); //TODO remove ToString
-                    if (_encoder.TryGetValue(piece, out int token))
-                    {
-                        lastPieceTokenLen = 1;
-                        ret.Add(token);
-                    }
-                    else
-                    {
-                        //TODO Cache？
-
-                        //if (_cache.TryGetValue(piece, out List<int> cacheToken))
-                        //{
-                        //    ret.AddRange(cacheToken);
-                        //    continue;
-                        //}
-
-                        var tokens = BytePairEncoding.BytePairEncode(piece, _encoder);
-                        lastPieceTokenLen = tokens.Count;
-                        ret.AddRange(tokens);
-
-                        //_cache[piece] = tokens;
-                    }
-                }
-
-                currentIndex = nextMatchStart;
-
-                if (currentIndex < text.Length)
-                {
-                    var match = enumerator.Current;
-                    var pieceSpan = textSpan.Slice(currentIndex, match.Length);
-                    if (_specialTokensEncoder.TryGetValue(pieceSpan.ToString(), out int token)) //TODO remove ToString
-                    {
-                        ret.Add(token);
-                        currentIndex += match.Length;
-                        lastPieceTokenLen = 0;
-                    }
-                }
+                return (ret, lastPieceTokenLen);
             }
-
-            return (ret, lastPieceTokenLen);
+            finally
+            {
+                // Return rented buffer
+                ArrayPool<byte>.Shared.Return(rentedPieceBuffer);
+            }
         }
 
 #else 
@@ -209,30 +236,156 @@ namespace TiktokenSharp
 #endif
 
 
-        public List<ReadOnlyMemory<byte>> DecodeNative(int[] tokens)
+        public List<ReadOnlyMemory<byte>> DecodeNative(IList<int> tokens)
         {
-            var ret = new List<ReadOnlyMemory<byte>>(tokens.Length * 2);
+            var ret = Utils.ByteMemoryListPool.Rent(tokens.Count);
             foreach (var token in tokens)
             {
                 ReadOnlyMemory<byte> tokenBytes = new ReadOnlyMemory<byte>();
                 if (Decoder.TryGetValue(token, out var value))
                 {
                     tokenBytes = value;
-                } 
+                }
                 else
                 {
-                    if (_specialTokensDecoder.TryGetValue(token, out var valueS))
+                    if (_specialTokensDecoderBytes.TryGetValue(token, out var specialBytes))
                     {
-                        tokenBytes = UTF8Encoding.UTF8.GetBytes(valueS);
+                        tokenBytes = specialBytes;
                     }
                 }
 
                 if (tokenBytes.Length > 0)
                 {
                     ret.Add(tokenBytes);
-                } 
+                }
             }
             return ret;
         }
+
+#if NET7_0_OR_GREATER
+        public int CountTokens(ReadOnlySpan<char> text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
+        {
+            int count = 0;
+            var textSpan = text;
+            int currentIndex = 0;
+
+            var enumerator = _specialRegex.EnumerateMatches(textSpan);
+            Span<byte> stackBuffer = stackalloc byte[768]; // Allocate once outside the loop for common cases
+
+            while (currentIndex < text.Length)
+            {
+                int nextMatchStart = text.Length;
+
+                if (enumerator.MoveNext())
+                {
+
+                    var current = enumerator.Current;
+                    var currentText = textSpan.Slice(current.Index, current.Length).ToString();
+
+                    if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
+                    {
+                        throw new InvalidOperationException(currentText.ToString());
+                    }
+                    if (allowedSpecial != null && allowedSpecial.Contains(currentText))
+                    {
+                        nextMatchStart = current.Index;
+                    }
+
+                }
+
+                ReadOnlySpan<char> currentSpan = textSpan.Slice(currentIndex, nextMatchStart - currentIndex);
+                foreach (var match in _regex.EnumerateMatches(currentSpan))
+                {
+                    var charSpan = currentSpan.Slice(match.Index, match.Length);
+
+                    // Use pre-allocated stack buffer for small strings, heap for large ones
+                    Span<byte> buffer = charSpan.Length * 3 <= stackBuffer.Length
+                        ? stackBuffer
+                        : new byte[charSpan.Length * 3];
+
+                    int byteCount = Encoding.UTF8.GetBytes(charSpan, buffer);
+                    var piece = buffer.Slice(0, byteCount).ToArray();
+
+                    if (_encoder.ContainsKey(piece))
+                    {
+                        count++;
+                    }
+                    else
+                    {
+                        count += BytePairEncoding.BytePairEncodeCount(piece, _encoder);
+                    }
+                }
+
+                currentIndex = nextMatchStart;
+
+                if (currentIndex < text.Length)
+                {
+                    var match = enumerator.Current;
+                    var pieceSpan = textSpan.Slice(currentIndex, match.Length);
+                    if (_specialTokensEncoder.ContainsKey(pieceSpan.ToString()))
+                    {
+                        count++;
+                        currentIndex += match.Length;
+                    }
+                }
+            }
+
+            return count;
+        }
+#else
+        public int CountTokens(string text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
+        {
+            Regex specialRegex = _specialRegex;
+            Regex regex = _regex;
+            int count = 0;
+
+            int start = 0;
+            while (true)
+            {
+                Match nextSpecial;
+                int startFind = start;
+                while (true)
+                {
+                    nextSpecial = specialRegex.Match(text, startFind);
+                    if (!nextSpecial.Success) break;
+                    var currentText = text.Substring(nextSpecial.Index, nextSpecial.Length);
+
+                    if (allowedSpecial != null && allowedSpecial.Contains(currentText))
+                    {
+                        break;
+                    }
+                    if (disallowedSpecial != null && disallowedSpecial.Contains(currentText))
+                    {
+                        throw new InvalidOperationException(currentText);
+                    }
+                    startFind = nextSpecial.Index + 1;
+                }
+                int end = nextSpecial.Success ? nextSpecial.Index : text.Length;
+
+                foreach (Match mat in regex.Matches(text.Substring(start, end - start)))
+                {
+                    var piece = Encoding.UTF8.GetBytes(mat.Value);
+                    if (_encoder.ContainsKey(piece))
+                    {
+                        count++;
+                        continue;
+                    }
+                    count += BytePairEncoding.BytePairEncodeCount(piece, _encoder);
+                }
+
+                if (nextSpecial.Success)
+                {
+                    count++;
+                    start = nextSpecial.Index + nextSpecial.Length;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return count;
+        }
+#endif
     }
 }

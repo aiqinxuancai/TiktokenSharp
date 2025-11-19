@@ -156,11 +156,148 @@ namespace TiktokenSharp
 
         public string Decode(List<int> tokens)
         {
-            var ret = _corePBE.DecodeNative(tokens.ToArray());
+            var ret = _corePBE.DecodeNative(tokens);
             string str = ByteHelper.ConvertByteListToString(ret);
+            Utils.ByteMemoryListPool.Return(ret);
             return str;
         }
 
+#if NET7_0_OR_GREATER
+        /// <summary>
+        /// Encodes text using ReadOnlySpan for zero-allocation performance
+        /// </summary>
+        public List<int> Encode(ReadOnlySpan<char> text,
+            HashSet<string> allowedSpecial = null,
+            HashSet<string> disallowedSpecial = null,
+            SpecialTokensMode allowedSpecialMode = SpecialTokensMode.Custom,
+            SpecialTokensMode disallowedSpecialMode = SpecialTokensMode.Custom)
+        {
+            HashSet<string> effectiveAllowed;
+            if (allowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveAllowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+            }
+            else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
+            {
+                effectiveAllowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveAllowed = allowedSpecial;
+            }
+
+            HashSet<string> effectiveDisallowed;
+            if (disallowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveDisallowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+                effectiveDisallowed.ExceptWith(effectiveAllowed);
+            }
+            else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
+            {
+                effectiveDisallowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveDisallowed = disallowedSpecial;
+            }
+
+            return _corePBE.EncodeNative(text.ToString(), effectiveAllowed, effectiveDisallowed).Item1;
+        }
+
+        /// <summary>
+        /// Counts tokens without allocating a list - efficient for getting token count only
+        /// </summary>
+        public int CountTokens(ReadOnlySpan<char> text,
+            HashSet<string> allowedSpecial = null,
+            HashSet<string> disallowedSpecial = null,
+            SpecialTokensMode allowedSpecialMode = SpecialTokensMode.Custom,
+            SpecialTokensMode disallowedSpecialMode = SpecialTokensMode.Custom)
+        {
+            HashSet<string> effectiveAllowed;
+            if (allowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveAllowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+            }
+            else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
+            {
+                effectiveAllowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveAllowed = allowedSpecial;
+            }
+
+            HashSet<string> effectiveDisallowed;
+            if (disallowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveDisallowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+                effectiveDisallowed.ExceptWith(effectiveAllowed);
+            }
+            else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
+            {
+                effectiveDisallowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveDisallowed = disallowedSpecial;
+            }
+
+            return _corePBE.CountTokens(text, effectiveAllowed, effectiveDisallowed);
+        }
+
+        /// <summary>
+        /// Counts tokens from a string without allocating a list
+        /// </summary>
+        public int CountTokens(string text,
+            HashSet<string> allowedSpecial = null,
+            HashSet<string> disallowedSpecial = null,
+            SpecialTokensMode allowedSpecialMode = SpecialTokensMode.Custom,
+            SpecialTokensMode disallowedSpecialMode = SpecialTokensMode.Custom)
+        {
+            return CountTokens(text.AsSpan(), allowedSpecial, disallowedSpecial, allowedSpecialMode, disallowedSpecialMode);
+        }
+#else
+        /// <summary>
+        /// Counts tokens without allocating a list - efficient for getting token count only
+        /// </summary>
+        public int CountTokens(string text,
+            HashSet<string> allowedSpecial = null,
+            HashSet<string> disallowedSpecial = null,
+            SpecialTokensMode allowedSpecialMode = SpecialTokensMode.Custom,
+            SpecialTokensMode disallowedSpecialMode = SpecialTokensMode.Custom)
+        {
+            HashSet<string> effectiveAllowed;
+            if (allowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveAllowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+            }
+            else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
+            {
+                effectiveAllowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveAllowed = allowedSpecial;
+            }
+
+            HashSet<string> effectiveDisallowed;
+            if (disallowedSpecialMode == SpecialTokensMode.All)
+            {
+                effectiveDisallowed = new HashSet<string>(_setting.SpecialTokens.Keys);
+                effectiveDisallowed.ExceptWith(effectiveAllowed);
+            }
+            else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
+            {
+                effectiveDisallowed = new HashSet<string>();
+            }
+            else
+            {
+                effectiveDisallowed = disallowedSpecial;
+            }
+
+            return _corePBE.CountTokens(text, effectiveAllowed, effectiveDisallowed);
+        }
+#endif
 
     }
 }

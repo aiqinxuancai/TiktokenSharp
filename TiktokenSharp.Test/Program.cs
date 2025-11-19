@@ -11,13 +11,19 @@ namespace TiktokenSharp.Test
         static void Main(string[] args)
         {
             //TikToken.PBEFileDirectory = @"D:\tikTokenFiles";
+
+            if (args.Length > 0 && args[0] == "--benchmark")
+            {
+                var summary = BenchmarkRunner.Run<BenchmarkTest>();
+                return;
+            }
+
             GPT4o();
             GPT4();
             GPT35();
             TextDavinci();
-            //var b = new BenchmarkTest();
-            //b.TiktokenSharp();
-            //var summary = BenchmarkRunner.Run<BenchmarkTest>();
+
+            Console.WriteLine("All tests passed!");
 
         }
 

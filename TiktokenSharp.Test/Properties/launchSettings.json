@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TiktokenSharp.Test": {
+      "commandName": "Project",
+      "commandLineArgs": "--benchmark"
+    }
+  }
+}

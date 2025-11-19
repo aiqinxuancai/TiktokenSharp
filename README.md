@@ -34,7 +34,7 @@ Below are the file download links:
 ## Benchmark Test
 
 I noticed that some users would like to get a comparison of efficiency. Here, I use SharpToken as the basic comparison, with the encoder cl100k_base, on the .Net 6.0 in Debug mode.
-* TiktokenSharp Version: 1.1.0 
+* TiktokenSharp Version: 1.2.0 
 * SharpToken Version: 2.0.1
 
 <details> 
@@ -78,15 +78,20 @@ public int TiktokenSharp()
 </details>
 
 
-|        Method |      Job |  Runtime |      Mean |    Error |   StdDev |      Gen0 |  Allocated |
-|-------------- |--------- |--------- |----------:|---------:|---------:|----------:|-----------:|
-| TiktokenSharp | .NET 8.0 | .NET 8.0 |  98.34 ms | 0.198 ms | 0.176 ms | 9833.3333 | 82321080 B |
-|    SharpToken | .NET 8.0 | .NET 8.0 | 116.38 ms | 1.026 ms | 0.909 ms | 2000.0000 | 23201696 B |
+| Method        | Job       | Runtime   | Mean     | Error    | StdDev   | Median   | Gen0      | Allocated |
+|-------------- |---------- |---------- |---------:|---------:|---------:|---------:|----------:|----------:|
+| SharpToken    | .NET 10.0 | .NET 10.0 | 58.24 ms | 1.159 ms | 2.885 ms | 56.97 ms | 1000.0000 |  22.13 MB |
+| **TiktokenSharp** | .NET 10.0 | .NET 10.0 | **40.85 ms** | 0.806 ms | 0.754 ms | 40.71 ms | 1076.9231 |  **13.28 MB** |
+| SharpToken    | .NET 8.0  | .NET 8.0  | 67.04 ms | 1.281 ms | 1.258 ms | 67.42 ms | 1500.0000 |  22.13 MB |
+| **TiktokenSharp** | .NET 8.0  | .NET 8.0  | 42.97 ms | 0.851 ms | 1.107 ms | 42.63 ms | 1076.9231 |  13.28 MB |
 
 
 ## Update
 
-### 1.1.5 20250814
+### 1.2.0 20251119
+* Optimize memory allocation and execution efficiency.
+
+### 1.1.8 20250814
 * Add Support gpt-5 models.
 
 ### 1.1.7 20250314
