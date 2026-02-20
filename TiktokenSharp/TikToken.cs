@@ -27,7 +27,7 @@ namespace TiktokenSharp
         /// <summary>
         /// You can set this item before EncodingForModel to specify the location for storing and downloading the bpe file. If not set, it defaults to the AppContext.BaseDirectory\bpe directory.
         /// </summary>
-        public static string PBEFileDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "bpe");
+        public static string PBEFileDirectory { get; set; } = Path.Combine(Path.GetTempPath(), "bpe");
 
         /// <summary>
         /// get encoding with modelName

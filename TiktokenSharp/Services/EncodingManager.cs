@@ -22,7 +22,7 @@ namespace TiktokenSharp.Services
             get { return _instance.Value; }
         }
 
-        public string PBEFileDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "bpe");
+        public string PBEFileDirectory { get; set; } = Path.Combine(Path.GetTempPath(), "bpe");
 
 
         const string ENDOFTEXT = "<|endoftext|>";
@@ -312,7 +312,7 @@ namespace TiktokenSharp.Services
             if (tikTokenBpeFile.StartsWith("http"))
             {
                 var fileName = Path.GetFileName(tikTokenBpeFile);
-                var saveDir = PBEFileDirectory; //Path.Combine(AppContext.BaseDirectory, "bpe");
+                var saveDir = PBEFileDirectory; //Path.Combine(Path.GetTempPath(), "bpe");
 
                 try
                 {
