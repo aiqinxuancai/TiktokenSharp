@@ -2,21 +2,14 @@
 using TiktokenSharp;
 using System;
 using TiktokenSharp.Test.Utils;
-using BenchmarkDotNet.Running;
 
 namespace TiktokenSharp.Test 
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             //TikToken.PBEFileDirectory = @"D:\tikTokenFiles";
-
-            if (args.Length > 0 && args[0] == "--benchmark")
-            {
-                var summary = BenchmarkRunner.Run<BenchmarkTest>();
-                return;
-            }
 
             GPT4o();
             GPT4();
