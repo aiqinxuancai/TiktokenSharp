@@ -308,66 +308,131 @@ namespace TiktokenSharp.Services
 
         private async Task<Dictionary<ReadOnlyMemory<byte>, int>> LoadTikTokenBpe(string tikTokenBpeFile)
         {
-            string localFilePath;
-            if (tikTokenBpeFile.StartsWith("http"))
+            if (!tikTokenBpeFile.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                var fileName = Path.GetFileName(tikTokenBpeFile);
-                var saveDir = PBEFileDirectory; //Path.Combine(AppContext.BaseDirectory, "bpe");
+                return LoadTikTokenBpeFromPath(tikTokenBpeFile);
+            }
 
+            var fileName = Path.GetFileName(tikTokenBpeFile);
+            var localFilePath = await TryGetCachedFilePath(tikTokenBpeFile, fileName);
+            if (!string.IsNullOrEmpty(localFilePath))
+            {
+                return LoadTikTokenBpeFromPath(localFilePath);
+            }
+
+            // If both BaseDirectory and Temp are not writable, continue in-memory without local cache.
+            var data = await DownloadTikTokenBpeAsync(tikTokenBpeFile);
+            return LoadTikTokenBpeFromBytes(data, tikTokenBpeFile);
+        }
+
+        private async Task<string> TryGetCachedFilePath(string tikTokenBpeFile, string fileName)
+        {
+            var preferredDir = string.IsNullOrWhiteSpace(PBEFileDirectory)
+                ? Path.Combine(AppContext.BaseDirectory, "bpe")
+                : PBEFileDirectory;
+
+            var candidateDirs = new[] { preferredDir, Path.GetTempPath() }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            byte[]? data = null;
+
+            foreach (var candidateDir in candidateDirs)
+            {
                 try
                 {
-                    //If an exception occurs, it means that the folder cannot be created. Change the storage folder to the Temp directory.
-                    if (!Directory.Exists(saveDir))
+                    Directory.CreateDirectory(candidateDir);
+
+                    var localFilePath = Path.Combine(candidateDir, fileName);
+                    if (!File.Exists(localFilePath))
                     {
-                        Directory.CreateDirectory(saveDir);
+                        if (data == null)
+                        {
+                            data = await DownloadTikTokenBpeAsync(tikTokenBpeFile);
+                        }
+
+                        TryWriteAllBytes(localFilePath, data);
+                    }
+
+                    if (File.Exists(localFilePath))
+                    {
+                        return localFilePath;
                     }
                 }
                 catch
                 {
-                    saveDir = Path.GetTempPath();
-                }
-
-
-                localFilePath = Path.Combine(saveDir, fileName);
-                if (!File.Exists(localFilePath))
-                {
-                    using (var client = new HttpClient())
-                    {
-                        //client.DownloadFile(tikTokenBpeFile, localFilePath);
-                        //File.WriteAllBytes(localFilePath, data);
-                        var data = await client.GetByteArrayAsync(tikTokenBpeFile);
-                        File.WriteAllBytes(localFilePath, data);
-                    }
+                    // Try next candidate directory.
                 }
             }
-            else
+
+            return string.Empty;
+        }
+
+        private static void TryWriteAllBytes(string filePath, byte[] data)
+        {
+            try
             {
-                localFilePath = tikTokenBpeFile;
+                File.WriteAllBytes(filePath, data);
             }
-            var bpeDict = new Dictionary<ReadOnlyMemory<byte>, int>(new ReadOnlyMemoryComparer());
+            catch (IOException) when (File.Exists(filePath))
+            {
+                // Another thread/process may have written the file first.
+            }
+        }
 
+        private async Task<byte[]> DownloadTikTokenBpeAsync(string tikTokenBpeFile)
+        {
+            using (var client = new HttpClient())
+            {
+                return await client.GetByteArrayAsync(tikTokenBpeFile);
+            }
+        }
+
+        private Dictionary<ReadOnlyMemory<byte>, int> LoadTikTokenBpeFromPath(string localFilePath)
+        {
             try
             {
                 var lines = File.ReadAllLines(localFilePath, Encoding.UTF8);
-                foreach (var line in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(line))
-                    {
-                        continue;
-                    }
-
-                    var tokens = line.Split(' ');
-                    if (tokens.Length != 2)
-                    {
-                        throw new FormatException($"Invalid file format: {localFilePath}");
-                    }
-
-                    bpeDict[Convert.FromBase64String(tokens[0])] = int.Parse(tokens[1]);
-                }
+                return ParseTikTokenBpeLines(lines, localFilePath);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to load TikTokenBpe from {localFilePath}: {ex.Message}", ex);
+            }
+        }
+
+        private Dictionary<ReadOnlyMemory<byte>, int> LoadTikTokenBpeFromBytes(byte[] data, string sourceName)
+        {
+            try
+            {
+                var text = Encoding.UTF8.GetString(data);
+                var lines = text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+                return ParseTikTokenBpeLines(lines, sourceName);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to load TikTokenBpe from {sourceName}: {ex.Message}", ex);
+            }
+        }
+
+        private Dictionary<ReadOnlyMemory<byte>, int> ParseTikTokenBpeLines(IEnumerable<string> lines, string sourceName)
+        {
+            var bpeDict = new Dictionary<ReadOnlyMemory<byte>, int>(new ReadOnlyMemoryComparer());
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var tokens = line.Split(' ');
+                if (tokens.Length != 2)
+                {
+                    throw new FormatException($"Invalid file format: {sourceName}");
+                }
+
+                bpeDict[Convert.FromBase64String(tokens[0])] = int.Parse(tokens[1]);
             }
 
             return bpeDict;
