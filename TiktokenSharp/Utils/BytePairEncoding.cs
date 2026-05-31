@@ -221,69 +221,81 @@ namespace TiktokenSharp.Utils
 
         public static int BytePairEncodeCount(byte[] piece, Dictionary<ReadOnlyMemory<byte>, int> ranks)
         {
-            ReadOnlyMemory<byte> pieceMemory = piece;
+            return BytePairEncodeCount((ReadOnlyMemory<byte>)piece, ranks);
+        }
 
-            if (piece.Length == 1)
+        public static int BytePairEncodeCount(ReadOnlyMemory<byte> pieceMemory, Dictionary<ReadOnlyMemory<byte>, int> ranks)
+        {
+            if (pieceMemory.Length == 1)
             {
                 return 1;
             }
 
-            var parts = new List<(int Start, int Rank)>(piece.Length + 1);
+            // Rent from pool instead of allocating
+            var parts = PartsListPool.Rent(pieceMemory.Length + 1);
 
-            for (int i = 0; i <= piece.Length; i++)
+            try
             {
-                parts.Add((i, int.MaxValue));
-            }
-
-            int? GetRank(int startIdx, int skip = 0)
-            {
-                if (startIdx + skip + 2 < parts.Count)
+                for (int i = 0; i <= pieceMemory.Length; i++)
                 {
-                    ReadOnlyMemory<byte> sliceMemory = pieceMemory.Slice(parts[startIdx].Item1, parts[startIdx + skip + 2].Item1 - parts[startIdx].Item1);
-                    if (ranks.TryGetValue(sliceMemory, out var rank))
+                    parts.Add((i, int.MaxValue));
+                }
+
+                int? GetRank(int startIdx, int skip = 0)
+                {
+                    if (startIdx + skip + 2 < parts.Count)
                     {
-                        return rank;
+                        ReadOnlyMemory<byte> sliceMemory = pieceMemory.Slice(parts[startIdx].Item1, parts[startIdx + skip + 2].Item1 - parts[startIdx].Item1);
+                        if (ranks.TryGetValue(sliceMemory, out var rank))
+                        {
+                            return rank;
+                        }
+                    }
+                    return null;
+                }
+
+                for (int i = 0; i < parts.Count - 2; i++)
+                {
+                    var rank = GetRank(i);
+                    if (rank != null)
+                    {
+                        parts[i] = (parts[i].Start, rank.Value);
                     }
                 }
-                return null;
-            }
 
-            for (int i = 0; i < parts.Count - 2; i++)
-            {
-                var rank = GetRank(i);
-                if (rank != null)
+                while (parts.Count > 1)
                 {
-                    parts[i] = (parts[i].Start, rank.Value);
-                }
-            }
-
-            while (parts.Count > 1)
-            {
-                var minRank = (Rank: int.MaxValue, Index: 0);
-                for (int i = 0; i < parts.Count - 1; i++)
-                {
-                    if (parts[i].Rank < minRank.Rank)
+                    var minRank = (Rank: int.MaxValue, Index: 0);
+                    for (int i = 0; i < parts.Count - 1; i++)
                     {
-                        minRank = (parts[i].Rank, i);
+                        if (parts[i].Rank < minRank.Rank)
+                        {
+                            minRank = (parts[i].Rank, i);
+                        }
+                    }
+                    if (minRank.Rank != int.MaxValue)
+                    {
+                        int i = minRank.Index;
+                        parts[i] = (parts[i].Start, GetRank(i, 1) ?? int.MaxValue);
+                        if (i > 0)
+                        {
+                            parts[i - 1] = (parts[i - 1].Start, GetRank(i - 1, 1) ?? int.MaxValue);
+                        }
+                        parts.RemoveAt(i + 1);
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
-                if (minRank.Rank != int.MaxValue)
-                {
-                    int i = minRank.Index;
-                    parts[i] = (parts[i].Start, GetRank(i, 1) ?? int.MaxValue);
-                    if (i > 0)
-                    {
-                        parts[i - 1] = (parts[i - 1].Start, GetRank(i - 1, 1) ?? int.MaxValue);
-                    }
-                    parts.RemoveAt(i + 1);
-                }
-                else
-                {
-                    break;
-                }
-            }
 
-            return parts.Count - 1;
+                return parts.Count - 1;
+            }
+            finally
+            {
+                // Return to pool for reuse
+                PartsListPool.Return(parts);
+            }
         }
 
         /// <summary>
