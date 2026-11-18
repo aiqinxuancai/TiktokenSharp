@@ -35,9 +35,21 @@ Below are the file download links:
 
 ## Benchmark Test
 
-I noticed that some users would like to get a comparison of efficiency. Here, I use SharpToken as the basic comparison, with the encoder cl100k_base, on the .Net 6.0 in Debug mode.
 * TiktokenSharp Version: 1.2.0 
 * SharpToken Version: 2.0.1
+* Benchmark Project: `TiktokenSharp.Benchmark`
+
+Run benchmark:
+
+```bash
+dotnet run --project TiktokenSharp.Benchmark/TiktokenSharp.Benchmark.csproj --framework net10.0 -c Release
+```
+
+List benchmarks:
+
+```bash
+dotnet run --project TiktokenSharp.Benchmark/TiktokenSharp.Benchmark.csproj --framework net10.0 -c Release -- --list flat
+```
 
 <details> 
 <summary>Code：</summary>
@@ -89,6 +101,13 @@ public int TiktokenSharp()
 
 
 ## Update
+
+### 1.2.1 20260222
+* Fix cache write failures in read-only environments by falling back from `PBEFileDirectory`/`BaseDirectory` to system `Temp`.
+* Add in-memory loading fallback when both cache directories are unavailable to avoid runtime crashes.
+* Upgrade `TiktokenSharp.Test` target framework to `.NET 10`.
+* Move benchmark code out of `TiktokenSharp.Test` into dedicated project `TiktokenSharp.Benchmark` (`net8.0` + `net10.0`).
+* Remove `--benchmark` mode from test runner and keep `TiktokenSharp.Test` focused on functional validation.
 
 ### 1.2.0 20251119
 * Optimize memory allocation and execution efficiency.

@@ -10,7 +10,7 @@
 	<RepositoryUrl>https://github.com/aiqinxuancai/TiktokenSharp</RepositoryUrl>
 	<PackageTags>chatgpt;openai</PackageTags>
 	<Title>TiktokenSharp</Title>
-	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.2.0</VersionPrefix>
+	<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.2.1</VersionPrefix>
 	<Authors>aiqinxuancai</Authors>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>

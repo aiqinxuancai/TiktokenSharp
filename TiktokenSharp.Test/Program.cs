@@ -2,29 +2,37 @@
 using TiktokenSharp;
 using System;
 using TiktokenSharp.Test.Utils;
-using BenchmarkDotNet.Running;
 
 namespace TiktokenSharp.Test 
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             //TikToken.PBEFileDirectory = @"D:\tikTokenFiles";
 
-            if (args.Length > 0 && args[0] == "--benchmark")
-            {
-                var summary = BenchmarkRunner.Run<BenchmarkTest>();
-                return;
-            }
-
+            Debug.Assert(typeof(CoreBPE).GetMethod(nameof(CoreBPE.EncodeNative)) != null);
             GPT4o();
             GPT4();
             GPT35();
             TextDavinci();
+            SpanEncodingAndCounting();
 
             Console.WriteLine("All tests passed!");
 
+        }
+
+        static void SpanEncodingAndCounting()
+        {
+            var tokenizer = TikToken.GetEncoding("cl100k_base");
+            var text = new string('x', 512) + " " + new string('\u00e9', 1024);
+            var padded = "[" + text + "]";
+            var span = padded.AsSpan(1, text.Length);
+            var expected = tokenizer.Encode(text);
+
+            Debug.Assert(tokenizer.Encode(span).IsEqualTo(expected));
+            Debug.Assert(tokenizer.CountTokens(span) == expected.Count);
+            Debug.Assert(tokenizer.Decode(expected) == text);
         }
 
         static void GPT4o()
