@@ -74,7 +74,7 @@ namespace TiktokenSharp
             return EncodeNative(text.AsSpan(), allowedSpecial, disallowedSpecial);
         }
 
-        public (List<int>, int) EncodeNative(ReadOnlySpan<char> text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
+        internal (List<int>, int) EncodeNative(ReadOnlySpan<char> text, HashSet<string> allowedSpecial, HashSet<string> disallowedSpecial)
         {
             var ret = new List<int>();
 
@@ -126,8 +126,9 @@ namespace TiktokenSharp
                         // Ensure rented buffer is large enough
                         if (rentedPieceBuffer.Length < maxByteCount)
                         {
-                            ArrayPool<byte>.Shared.Return(rentedPieceBuffer);
+                            var previousBuffer = rentedPieceBuffer;
                             rentedPieceBuffer = ArrayPool<byte>.Shared.Rent(maxByteCount);
+                            ArrayPool<byte>.Shared.Return(previousBuffer);
                         }
 
                         int byteCount = Encoding.UTF8.GetBytes(charSpan, rentedPieceBuffer);
@@ -318,8 +319,9 @@ namespace TiktokenSharp
                         // Ensure rented buffer is large enough
                         if (rentedPieceBuffer.Length < maxByteCount)
                         {
-                            ArrayPool<byte>.Shared.Return(rentedPieceBuffer);
+                            var previousBuffer = rentedPieceBuffer;
                             rentedPieceBuffer = ArrayPool<byte>.Shared.Rent(maxByteCount);
+                            ArrayPool<byte>.Shared.Return(previousBuffer);
                         }
 
                         int byteCount = Encoding.UTF8.GetBytes(charSpan, rentedPieceBuffer);
