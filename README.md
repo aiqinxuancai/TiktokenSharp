@@ -2,6 +2,8 @@
 
 This library is a C# implementation of the token count calculation, referencing OpenAI's official Rust language version. Currently, the encoding algorithms for `o200k_base`, `cl100k_base`, and `p50k_base` have been implemented. You can directly obtain the corresponding encoding algorithm using the model name.
 
+GPT-5.x models use `o200k_base`. GPT-6.x models, including `gpt-6.2-astra` and `gpt-6.2-sol`, use `o200k_base` for local text token estimates while the public tiktoken mapping omits GPT-6.x. [OpenAI tiktoken model mappings](https://github.com/openai/tiktoken/blob/main/tiktoken/model.py)
+
 ## Getting Started
 
 TiktokenSharp is available as [NuGet package](https://www.nuget.org/packages/TiktokenSharp/).
