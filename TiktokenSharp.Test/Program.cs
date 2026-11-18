@@ -17,6 +17,7 @@ namespace TiktokenSharp.Test
             GPT35();
             TextDavinci();
             SpanEncodingAndCounting();
+            CachedVocabularyAndLongMerges().GetAwaiter().GetResult();
 
             Console.WriteLine("All tests passed!");
 
@@ -33,6 +34,56 @@ namespace TiktokenSharp.Test
             Debug.Assert(tokenizer.Encode(span).IsEqualTo(expected));
             Debug.Assert(tokenizer.CountTokens(span) == expected.Count);
             Debug.Assert(tokenizer.Decode(expected) == text);
+        }
+
+        static async Task CachedVocabularyAndLongMerges()
+        {
+            var originalDirectory = TikToken.PBEFileDirectory;
+            var directory = Directory.CreateTempSubdirectory("tiktokensharp-test-");
+            var path = Path.Combine(directory.FullName, "cl100k_base.tiktoken");
+            const string vocabulary = "YQ== 7\nYWE= 3\nYWFh 1\n8J8= 10\nmoA= 11\n";
+            try
+            {
+                File.WriteAllText(path, vocabulary);
+                TikToken.PBEFileDirectory = directory.FullName;
+                var tokenizer = await TikToken.EncodingForModelAsync("gpt-4");
+                var input = new string('a', 514);
+                var expected = Enumerable.Repeat(1, 171).Append(7).ToList();
+                Parallel.For(0, 16, _ =>
+                {
+                    var other = TikToken.GetEncoding("cl100k_base");
+                    Debug.Assert(other.Encode(input).SequenceEqual(expected));
+                    Debug.Assert(other.CountTokens(input) == expected.Count);
+                });
+                Debug.Assert(tokenizer.Decode(new List<int> { 10, 11, -1, 100257 }) == "\U0001f680<|endoftext|>");
+                Debug.Assert(tokenizer.Decode(new List<int> { 10 }) == "\ufffd");
+
+                // Keep the original tokenizer alive while replacing the vocabulary with a same-size file.
+                var stamp = File.GetLastWriteTimeUtc(path);
+                File.WriteAllText(path, vocabulary.Replace("YQ== 7", "YQ== 8"));
+                File.SetLastWriteTimeUtc(path, stamp.AddMinutes(1));
+                var updated = await TikToken.GetEncodingAsync("cl100k_base");
+                Debug.Assert(updated.Encode("a").Single() == 8);
+                Debug.Assert(tokenizer.Encode("a").Single() == 7);
+
+                File.WriteAllText(path, "invalid");
+                try
+                {
+                    await TikToken.GetEncodingAsync("cl100k_base");
+                    throw new Exception("Expected an invalid vocabulary to be rejected.");
+                }
+                catch (InvalidOperationException ex) when (ex.InnerException is FormatException) { }
+
+                File.WriteAllText(path, vocabulary);
+                var repaired = TikToken.EncodingForModel("gpt-4");
+                Debug.Assert(repaired.Encode("a").Single() == 7);
+            }
+            finally
+            {
+                TikToken.PBEFileDirectory = originalDirectory;
+                File.Delete(path);
+                directory.Delete();
+            }
         }
 
         static void GPT4o()

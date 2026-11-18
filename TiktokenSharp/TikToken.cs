@@ -36,9 +36,8 @@ namespace TiktokenSharp
         /// <returns></returns>
         public static TikToken EncodingForModel(string modelName)
         {
-            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
-            var setting = EncodingManager.Instance.GetEncodingSetting(modelName);
-            return new TikToken(setting);
+            var setting = EncodingManager.Instance.GetEncodingSetting(modelName, PBEFileDirectory);
+            return new TikToken(setting, shareCore: true);
         }
 
         /// <summary>
@@ -48,9 +47,8 @@ namespace TiktokenSharp
         /// <returns></returns>
         public static TikToken GetEncoding(string encodingName)
         {
-            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
-            var setting = EncodingManager.Instance.GetEncodingSetting(encodingName);
-            return new TikToken(setting);
+            var setting = EncodingManager.Instance.GetEncodingSetting(encodingName, PBEFileDirectory);
+            return new TikToken(setting, shareCore: true);
         }
 
         /// <summary>
@@ -60,9 +58,8 @@ namespace TiktokenSharp
         /// <returns></returns>
         public static async Task<TikToken> EncodingForModelAsync(string modelName)
         {
-            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
-            var setting = await EncodingManager.Instance.GetEncodingSettingAsync(modelName);
-            return new TikToken(setting);
+            var setting = await EncodingManager.Instance.GetEncodingSettingAsync(modelName, PBEFileDirectory).ConfigureAwait(false);
+            return new TikToken(setting, shareCore: true);
         }
 
         /// <summary>
@@ -72,16 +69,26 @@ namespace TiktokenSharp
         /// <returns></returns>
         public static async Task<TikToken> GetEncodingAsync(string encodingName)
         {
-            EncodingManager.Instance.PBEFileDirectory = PBEFileDirectory;
-            var setting = await EncodingManager.Instance.GetEncodingSettingAsync(encodingName);
-            return new TikToken(setting);
+            var setting = await EncodingManager.Instance.GetEncodingSettingAsync(encodingName, PBEFileDirectory).ConfigureAwait(false);
+            return new TikToken(setting, shareCore: true);
         }
 
         private CoreBPE _corePBE;
 
         private EncodingSettingModel _setting;
 
-        public TikToken(EncodingSettingModel setting)
+        private static readonly ConditionalWeakTable<EncodingSettingModel, CoreBPE> BuiltInCores = new();
+        private static readonly HashSet<string> EmptySpecialTokens = new();
+
+        public TikToken(EncodingSettingModel setting) : this(setting, shareCore: false) { }
+
+        private TikToken(EncodingSettingModel setting, bool shareCore)
+        {
+            _setting = setting;
+            _corePBE = shareCore ? BuiltInCores.GetValue(setting, CreateCore) : CreateCore(setting);
+        }
+
+        private static CoreBPE CreateCore(EncodingSettingModel setting)
         {
             if (setting.ExplicitNVocab != null)
             {
@@ -96,8 +103,7 @@ namespace TiktokenSharp
                 }
             }
 
-            _corePBE = new CoreBPE(setting.MergeableRanks, setting.SpecialTokens, setting.PatStr);
-            _setting = setting;
+            return new CoreBPE(setting.MergeableRanks, setting.SpecialTokens, setting.PatStr);
         }
 
         public List<int> Encode(string text,
@@ -113,7 +119,7 @@ namespace TiktokenSharp
             }
             else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
             {
-                effectiveAllowed = new HashSet<string>();
+                effectiveAllowed = EmptySpecialTokens;
             }
             else
             {
@@ -129,7 +135,7 @@ namespace TiktokenSharp
             }
             else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
             {
-                effectiveDisallowed = new HashSet<string>();
+                effectiveDisallowed = EmptySpecialTokens;
             }
             else
             {
@@ -156,10 +162,7 @@ namespace TiktokenSharp
 
         public string Decode(List<int> tokens)
         {
-            var ret = _corePBE.DecodeNative(tokens);
-            string str = ByteHelper.ConvertByteListToString(ret);
-            Utils.ByteMemoryListPool.Return(ret);
-            return str;
+            return _corePBE.DecodeText(tokens);
         }
 
 #if NET7_0_OR_GREATER
@@ -179,7 +182,7 @@ namespace TiktokenSharp
             }
             else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
             {
-                effectiveAllowed = new HashSet<string>();
+                effectiveAllowed = EmptySpecialTokens;
             }
             else
             {
@@ -194,7 +197,7 @@ namespace TiktokenSharp
             }
             else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
             {
-                effectiveDisallowed = new HashSet<string>();
+                effectiveDisallowed = EmptySpecialTokens;
             }
             else
             {
@@ -220,7 +223,7 @@ namespace TiktokenSharp
             }
             else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
             {
-                effectiveAllowed = new HashSet<string>();
+                effectiveAllowed = EmptySpecialTokens;
             }
             else
             {
@@ -235,7 +238,7 @@ namespace TiktokenSharp
             }
             else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
             {
-                effectiveDisallowed = new HashSet<string>();
+                effectiveDisallowed = EmptySpecialTokens;
             }
             else
             {
@@ -273,7 +276,7 @@ namespace TiktokenSharp
             }
             else if (allowedSpecialMode == SpecialTokensMode.None || allowedSpecial == null)
             {
-                effectiveAllowed = new HashSet<string>();
+                effectiveAllowed = EmptySpecialTokens;
             }
             else
             {
@@ -288,7 +291,7 @@ namespace TiktokenSharp
             }
             else if (disallowedSpecialMode == SpecialTokensMode.None || disallowedSpecial == null)
             {
-                effectiveDisallowed = new HashSet<string>();
+                effectiveDisallowed = EmptySpecialTokens;
             }
             else
             {

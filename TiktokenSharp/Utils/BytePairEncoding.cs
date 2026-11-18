@@ -37,36 +37,7 @@ namespace TiktokenSharp.Utils
         }
     }
 
-    // Pool for reusing List<ReadOnlyMemory<byte>> in DecodeNative
-    internal static class ByteMemoryListPool
-    {
-        [ThreadStatic]
-        private static List<ReadOnlyMemory<byte>> t_cachedList;
 
-        public static List<ReadOnlyMemory<byte>> Rent(int capacity)
-        {
-            var list = t_cachedList;
-            if (list != null)
-            {
-                t_cachedList = null;
-                list.Clear();
-                if (list.Capacity < capacity)
-                {
-                    list.Capacity = capacity;
-                }
-                return list;
-            }
-            return new List<ReadOnlyMemory<byte>>(capacity);
-        }
-
-        public static void Return(List<ReadOnlyMemory<byte>> list)
-        {
-            if (list != null && list.Capacity <= 512) // Don't cache very large lists
-            {
-                t_cachedList = list;
-            }
-        }
-    }
 
     internal class BytePairEncoding
     {
@@ -219,6 +190,86 @@ namespace TiktokenSharp.Utils
             return BytePairMerge(pieceMemory, ranks, range => pieceMemory.Slice(range.Start.Value, range.End.Value - range.Start.Value).ToArray());
         }
 
+#if NET7_0_OR_GREATER
+        private const int HeapMergeThreshold = 512;
+        private struct Neighbors
+        {
+            internal int Previous;
+            internal int Next;
+        }
+
+        // Retain at most one heap across threads. Large outliers can be collected after the call.
+        private static PriorityQueue<int, long>? _spareMergeQueue;
+
+        private static int MergeLongPiece(ReadOnlyMemory<byte> piece, Dictionary<ReadOnlyMemory<byte>, int> ranks, List<int>? output)
+        {
+            int length = piece.Length;
+            var heap = System.Threading.Interlocked.Exchange(ref _spareMergeQueue, null) ?? new PriorityQueue<int, long>();
+            var links = ArrayPool<Neighbors>.Shared.Rent(length);
+            try
+            {
+                for (int i = 0; i < length; i++)
+                {
+                    links[i].Previous = i - 1;
+                    links[i].Next = i + 1;
+                }
+
+                void EnqueuePair(int left)
+                {
+                    int right = links[left].Next;
+                    if (right == length)
+                        return;
+
+                    int end = links[right].Next;
+                    if (ranks.TryGetValue(piece.Slice(left, end - left), out int rank) && rank != int.MaxValue)
+                    {
+                        // Rank first, then the leftmost pair on ties, just like the linear scan.
+                        long priority = ((long)rank << 32) | (uint)left;
+                        heap.Enqueue(end, priority);
+                    }
+                }
+
+                for (int i = 0; i < length - 1; i++)
+                    EnqueuePair(i);
+
+                int count = length;
+                while (heap.TryDequeue(out int end, out long priority))
+                {
+                    int left = unchecked((int)priority);
+                    int right = links[left].Next;
+                    // A neighboring merge can invalidate this queued pair.
+                    if (right < 0 || right == length || links[right].Next != end)
+                        continue;
+
+                    links[left].Next = end;
+                    links[right].Next = -1;
+                    if (end < length)
+                        links[end].Previous = left;
+                    if (links[left].Previous >= 0)
+                        EnqueuePair(links[left].Previous);
+                    EnqueuePair(left);
+                    count--;
+                }
+
+                if (output != null)
+                {
+                    for (int left = 0; left < length; left = links[left].Next)
+                        output.Add(ranks[piece.Slice(left, links[left].Next - left)]);
+                }
+                return count;
+            }
+            finally
+            {
+                ArrayPool<Neighbors>.Shared.Return(links);
+                if (heap.EnsureCapacity(0) <= 16384)
+                {
+                    heap.Clear();
+                    System.Threading.Interlocked.CompareExchange(ref _spareMergeQueue, heap, null);
+                }
+            }
+        }
+#endif
+
         public static int BytePairEncodeCount(byte[] piece, Dictionary<ReadOnlyMemory<byte>, int> ranks)
         {
             return BytePairEncodeCount((ReadOnlyMemory<byte>)piece, ranks);
@@ -226,6 +277,10 @@ namespace TiktokenSharp.Utils
 
         public static int BytePairEncodeCount(ReadOnlyMemory<byte> pieceMemory, Dictionary<ReadOnlyMemory<byte>, int> ranks)
         {
+#if NET7_0_OR_GREATER
+            if (pieceMemory.Length >= HeapMergeThreshold)
+                return MergeLongPiece(pieceMemory, ranks, null);
+#endif
             if (pieceMemory.Length == 1)
             {
                 return 1;
@@ -303,6 +358,13 @@ namespace TiktokenSharp.Utils
         /// </summary>
         public static void BytePairEncodeInto(ReadOnlyMemory<byte> pieceMemory, Dictionary<ReadOnlyMemory<byte>, int> ranks, List<int> output)
         {
+#if NET7_0_OR_GREATER
+            if (pieceMemory.Length >= HeapMergeThreshold)
+            {
+                MergeLongPiece(pieceMemory, ranks, output);
+                return;
+            }
+#endif
             if (pieceMemory.Length == 1)
             {
                 output.Add(ranks[pieceMemory]);

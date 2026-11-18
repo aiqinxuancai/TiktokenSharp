@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TiktokenSharp.Model;
 using TiktokenSharp.Utils;
@@ -22,7 +23,21 @@ namespace TiktokenSharp.Services
             get { return _instance.Value; }
         }
 
-        public string PBEFileDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "bpe");
+        private sealed class CachedEncoding
+        {
+            internal readonly SemaphoreSlim Gate = new SemaphoreSlim(1);
+            internal WeakReference<EncodingSettingModel>? Setting;
+            internal string? Path;
+            internal long Length;
+            internal DateTime LastWrite;
+        }
+
+        private readonly Dictionary<string, CachedEncoding> _encodings = new Dictionary<string, CachedEncoding>
+        {
+            ["cl100k_base"] = new CachedEncoding(),
+            ["o200k_base"] = new CachedEncoding(),
+            ["p50k_base"] = new CachedEncoding()
+        };
 
 
         const string ENDOFTEXT = "<|endoftext|>";
@@ -162,175 +177,66 @@ namespace TiktokenSharp.Services
             );
         }
 
-        /// <summary>
-        /// Gets the encoding settings for the specified model or encoding name.
-        /// </summary>
-        /// <param name="modelOrEncodingName">The model name or encoding name</param>
-        /// <returns>The encoding setting model</returns>
-        public EncodingSettingModel GetEncodingSetting(string modelOrEncodingName)
+        public EncodingSettingModel GetEncodingSetting(string model, string directory)
         {
-            string encodingName = GetEncodingNameForModel(modelOrEncodingName);
-            return GetEncoding(encodingName);
+            return GetEncodingSettingAsync(model, directory).Result;
         }
 
-        /// <summary>
-        /// Asynchronously gets the encoding settings for the specified model or encoding name.
-        /// </summary>
-        /// <param name="modelOrEncodingName">The model name or encoding name</param>
-        /// <returns>A task containing the encoding setting model</returns>
-        public async Task<EncodingSettingModel> GetEncodingSettingAsync(string modelOrEncodingName)
+        public Task<EncodingSettingModel> GetEncodingSettingAsync(string model, string directory)
         {
-            string encodingName = GetEncodingNameForModel(modelOrEncodingName);
-            return await GetEncodingAsync(encodingName);
+            var name = GetEncodingNameForModel(model);
+            if (!_encodings.TryGetValue(name, out var cache))
+                throw new NotImplementedException();
+
+            return LoadEncodingAsync(name, directory, cache);
         }
 
-
-
-
-        /// <summary>
-        /// Get encoding setting with encoding name.
-        /// </summary>
-        /// <param name="encodingName">cl100k_base p50k_base ...</param>
-        /// <returns></returns>
-        public EncodingSettingModel GetEncoding(string encodingName)
+        private async Task<EncodingSettingModel> LoadEncodingAsync(string name, string directory, CachedEncoding cache)
         {
-            if (!string.IsNullOrEmpty(encodingName))
+            await cache.Gate.WaitAsync().ConfigureAwait(false);
+            try
             {
-                switch (encodingName)
+                var fileName = name + ".tiktoken";
+                var url = "https://openaipublic.blob.core.windows.net/encodings/" + fileName;
+                var source = await GetVocabularySourceAsync(url, fileName, directory).ConfigureAwait(false);
+                var file = source.Path == null ? null : new FileInfo(source.Path);
+                if (file != null && cache.Path == file.FullName && cache.Length == file.Length &&
+                    cache.LastWrite == file.LastWriteTimeUtc && cache.Setting != null &&
+                    cache.Setting.TryGetTarget(out var existing))
+                    return existing;
+
+                // Read the stamp before parsing so a concurrent replacement gets rechecked on the next call.
+                var length = file?.Length ?? 0;
+                var lastWrite = file?.LastWriteTimeUtc ?? default;
+                var ranks = file != null ? LoadTikTokenBpeFromPath(file.FullName) :
+                    LoadTikTokenBpeFromBytes(source.Data!, url);
+                var setting = name switch
                 {
-                    case "gpt2":
-                        {
-                            //TODO
-                            throw new NotImplementedException();
-                        }
-                    case "r50k_base":
-                        {
-                            //TODO
-                            throw new NotImplementedException(); ;
-                        }
-                    case "p50k_base":
-                        {
-                            return p50k_base().Result;
-                        }
-                    case "p50k_edit":
-                        {
-                            //TODO
-                            throw new NotImplementedException();
-                        }
-                    case "cl100k_base":
-                        {
-                            return cl100k_base().Result;
-                        }
-                    case "o200k_base":
-                        {
-                            return o200k_base().Result;
-                        }
-
-
-                    default:
-                        throw new NotImplementedException();
-                }
-
-            }
-            else
-            {
-                throw new NotImplementedException("Unsupported model");
-            }
-        }
-
-
-
-
-
-        /// <summary>
-        /// Get encoding setting with encoding name.
-        /// </summary>
-        /// <param name="encodingName">cl100k_base p50k_base ...</param>
-        /// <returns></returns>
-        public async Task<EncodingSettingModel> GetEncodingAsync(string encodingName)
-        {
-            if (!string.IsNullOrEmpty(encodingName))
-            {
-                switch (encodingName)
+                    "cl100k_base" => cl100k_base(ranks),
+                    "o200k_base" => o200k_base(ranks),
+                    "p50k_base" => p50k_base(ranks),
+                    _ => throw new NotImplementedException()
+                };
+                if (file != null)
                 {
-                    case "gpt2":
-                        {
-                            //TODO
-                            throw new NotImplementedException();
-                        }
-                    case "r50k_base":
-                        {
-                            //TODO
-                            throw new NotImplementedException(); ;
-                        }
-                    case "p50k_base":
-                        {
-                            return await p50k_base();
-                        }
-                    case "p50k_edit":
-                        {
-                            //TODO
-                            throw new NotImplementedException();
-                        }
-                    case "cl100k_base":
-                        {
-                            return await cl100k_base();
-                        }
-                    case "o200k_base":
-                        {
-                            return await o200k_base();
-                        }
-                    default:
-                        throw new NotImplementedException();
+                    cache.Path = file.FullName;
+                    cache.Length = length;
+                    cache.LastWrite = lastWrite;
+                    cache.Setting = new WeakReference<EncodingSettingModel>(setting);
                 }
-
+                return setting;
             }
-            else
+            finally
             {
-                throw new NotImplementedException("Unsupported model");
+                cache.Gate.Release();
             }
         }
 
-
-
-        private Dictionary<byte[], int> LoadTikTokenBpeFromLocal(string tikTokenBpeFile)
+        private async Task<(string? Path, byte[]? Data)> GetVocabularySourceAsync(string tikTokenBpeFile, string fileName, string directory)
         {
-            var contents = File.ReadAllLines(tikTokenBpeFile, Encoding.UTF8);
-            var bpeDict = new Dictionary<byte[], int>(contents.Length, new ByteArrayComparer());
-
-            foreach (var line in contents.Where(l => !string.IsNullOrWhiteSpace(l)))
-            {
-                var tokens = line.Split();
-                bpeDict.Add(Convert.FromBase64String(tokens[0]), int.Parse(tokens[1]));
-            }
-
-            return bpeDict;
-        }
-
-        private async Task<Dictionary<ReadOnlyMemory<byte>, int>> LoadTikTokenBpe(string tikTokenBpeFile)
-        {
-            if (!tikTokenBpeFile.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                return LoadTikTokenBpeFromPath(tikTokenBpeFile);
-            }
-
-            var fileName = Path.GetFileName(tikTokenBpeFile);
-            var localFilePath = await TryGetCachedFilePath(tikTokenBpeFile, fileName);
-            if (!string.IsNullOrEmpty(localFilePath))
-            {
-                return LoadTikTokenBpeFromPath(localFilePath);
-            }
-
-            // If both BaseDirectory and Temp are not writable, continue in-memory without local cache.
-            var data = await DownloadTikTokenBpeAsync(tikTokenBpeFile);
-            return LoadTikTokenBpeFromBytes(data, tikTokenBpeFile);
-        }
-
-        private async Task<string> TryGetCachedFilePath(string tikTokenBpeFile, string fileName)
-        {
-            var preferredDir = string.IsNullOrWhiteSpace(PBEFileDirectory)
+            var preferredDir = string.IsNullOrWhiteSpace(directory)
                 ? Path.Combine(AppContext.BaseDirectory, "bpe")
-                : PBEFileDirectory;
+                : directory;
 
             var candidateDirs = new[] { preferredDir, Path.GetTempPath() }
                 .Where(path => !string.IsNullOrWhiteSpace(path))
@@ -342,23 +248,14 @@ namespace TiktokenSharp.Services
             {
                 try
                 {
-                    Directory.CreateDirectory(candidateDir);
-
                     var localFilePath = Path.Combine(candidateDir, fileName);
-                    if (!File.Exists(localFilePath))
-                    {
-                        if (data == null)
-                        {
-                            data = await DownloadTikTokenBpeAsync(tikTokenBpeFile);
-                        }
-
-                        TryWriteAllBytes(localFilePath, data);
-                    }
-
                     if (File.Exists(localFilePath))
-                    {
-                        return localFilePath;
-                    }
+                        return (localFilePath, null);
+
+                    Directory.CreateDirectory(candidateDir);
+                    data ??= await DownloadTikTokenBpeAsync(tikTokenBpeFile).ConfigureAwait(false);
+                    TryWriteAllBytes(localFilePath, data);
+                    return (localFilePath, null);
                 }
                 catch
                 {
@@ -366,18 +263,30 @@ namespace TiktokenSharp.Services
                 }
             }
 
-            return string.Empty;
+            return (null, data ?? await DownloadTikTokenBpeAsync(tikTokenBpeFile).ConfigureAwait(false));
         }
 
         private static void TryWriteAllBytes(string filePath, byte[] data)
         {
+            // Publish a complete file so another process cannot cache a partially written vocabulary.
+            string temporaryPath = filePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            var stream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
             try
             {
-                File.WriteAllBytes(filePath, data);
+                using (stream)
+                    stream.Write(data, 0, data.Length);
+                try
+                {
+                    File.Move(temporaryPath, filePath);
+                }
+                catch (IOException) when (File.Exists(filePath))
+                {
+                    // A concurrent writer finished first.
+                }
             }
-            catch (IOException) when (File.Exists(filePath))
+            finally
             {
-                // Another thread/process may have written the file first.
+                File.Delete(temporaryPath);
             }
         }
 
@@ -385,65 +294,78 @@ namespace TiktokenSharp.Services
         {
             using (var client = new HttpClient())
             {
-                return await client.GetByteArrayAsync(tikTokenBpeFile);
+                return await client.GetByteArrayAsync(tikTokenBpeFile).ConfigureAwait(false);
             }
         }
 
-        private Dictionary<ReadOnlyMemory<byte>, int> LoadTikTokenBpeFromPath(string localFilePath)
+        private Dictionary<ReadOnlyMemory<byte>, int> LoadTikTokenBpeFromPath(string path)
         {
             try
             {
-                var lines = File.ReadAllLines(localFilePath, Encoding.UTF8);
-                return ParseTikTokenBpeLines(lines, localFilePath);
+                using var stream = File.OpenRead(path);
+                return ParseTikTokenBpe(stream, path);
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to load TikTokenBpe from {localFilePath}: {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to load TikTokenBpe from {path}: {ex.Message}", ex);
             }
         }
 
-        private Dictionary<ReadOnlyMemory<byte>, int> LoadTikTokenBpeFromBytes(byte[] data, string sourceName)
+        private Dictionary<ReadOnlyMemory<byte>, int> LoadTikTokenBpeFromBytes(byte[] data, string source)
         {
             try
             {
-                var text = Encoding.UTF8.GetString(data);
-                var lines = text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
-                return ParseTikTokenBpeLines(lines, sourceName);
+                using var stream = new MemoryStream(data, writable: false);
+                return ParseTikTokenBpe(stream, source);
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to load TikTokenBpe from {sourceName}: {ex.Message}", ex);
+                throw new InvalidOperationException($"Failed to load TikTokenBpe from {source}: {ex.Message}", ex);
             }
         }
 
-        private Dictionary<ReadOnlyMemory<byte>, int> ParseTikTokenBpeLines(IEnumerable<string> lines, string sourceName)
+        private static Dictionary<ReadOnlyMemory<byte>, int> ParseTikTokenBpe(Stream stream, string source)
         {
-            var bpeDict = new Dictionary<ReadOnlyMemory<byte>, int>(new ReadOnlyMemoryComparer());
-
-            foreach (var line in lines)
+            // Built-in vocabulary rows average 16-19 bytes. Cap the initial reservation for custom files.
+            int capacity = (int)Math.Min(stream.Length / 16, 200000);
+            var ranks = new Dictionary<ReadOnlyMemory<byte>, int>(capacity, new ReadOnlyMemoryComparer());
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+#if !NETSTANDARD2_0
+            byte[] block = Array.Empty<byte>();
+            int blockSize = (int)Math.Min(stream.Length, 16384);
+            int used = 0;
+#endif
+            string? line;
+            while ((line = reader.ReadLine()) != null)
             {
                 if (string.IsNullOrWhiteSpace(line))
-                {
                     continue;
-                }
 
-                var tokens = line.Split(' ');
-                if (tokens.Length != 2)
+                int separator = line.IndexOf(' ');
+                if (separator < 0 || line.IndexOf(' ', separator + 1) >= 0)
+                    throw new FormatException($"Invalid file format: {source}");
+#if NETSTANDARD2_0
+                ranks[Convert.FromBase64String(line.Substring(0, separator))] = int.Parse(line.Substring(separator + 1));
+#else
+                int maxBytes = separator / 4 * 3;
+                if (block.Length - used < maxBytes)
                 {
-                    throw new FormatException($"Invalid file format: {sourceName}");
+                    block = new byte[Math.Max(blockSize, maxBytes)];
+                    used = 0;
                 }
+                if (!Convert.TryFromBase64Chars(line.AsSpan(0, separator), block.AsSpan(used), out int length))
+                    throw new FormatException($"Invalid base64 token in {source}");
 
-                bpeDict[Convert.FromBase64String(tokens[0])] = int.Parse(tokens[1]);
+                ranks[new ReadOnlyMemory<byte>(block, used, length)] = int.Parse(line.AsSpan(separator + 1));
+                used += length;
+#endif
             }
-
-            return bpeDict;
+            return ranks;
         }
 
 
-        private async Task<EncodingSettingModel> cl100k_base()
+        private static EncodingSettingModel cl100k_base(Dictionary<ReadOnlyMemory<byte>, int> mergeable_ranks)
         {
-            //When using the mod for the first time, the pbe file will be downloaded over the network.
-            var mergeable_ranks = await LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken");
             var special_tokens = new Dictionary<string, int>{
                                     { ENDOFTEXT, 100257},
                                     { FIM_PREFIX, 100258},
@@ -462,10 +384,8 @@ namespace TiktokenSharp.Services
         }
 
 
-        private async Task<EncodingSettingModel> o200k_base()
+        private static EncodingSettingModel o200k_base(Dictionary<ReadOnlyMemory<byte>, int> mergeable_ranks)
         {
-            //When using the mod for the first time, the pbe file will be downloaded over the network.
-            var mergeable_ranks = await LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken");
             var special_tokens = new Dictionary<string, int>{
                                     { ENDOFTEXT, 199999},
                                     { ENDOFPROMPT, 200018}
@@ -495,10 +415,8 @@ namespace TiktokenSharp.Services
         }
 
 
-        private async Task<EncodingSettingModel> p50k_base()
+        private static EncodingSettingModel p50k_base(Dictionary<ReadOnlyMemory<byte>, int> mergeable_ranks)
         {
-            //When using the mod for the first time, the pbe file will be downloaded over the network.
-            var mergeable_ranks = await LoadTikTokenBpe("https://openaipublic.blob.core.windows.net/encodings/p50k_base.tiktoken");
             var special_tokens = new Dictionary<string, int>{
                                     { ENDOFTEXT, 50256}
                                 };

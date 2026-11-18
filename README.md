@@ -35,72 +35,55 @@ Below are the file download links:
 
 ## Benchmark Test
 
-* TiktokenSharp Version: 1.2.0 
-* SharpToken Version: 2.0.1
-* Benchmark Project: `TiktokenSharp.Benchmark`
+Measured on November 18, 2026, using BenchmarkDotNet 0.15.6, Windows 11 x64 (14 physical cores, 20 logical processors), and .NET SDK 10.0.403. All runs used Release builds, one launch, three warmup iterations, and eight measurement iterations. The tables report mean elapsed time and managed bytes allocated per operation.
 
-Run benchmark:
+### Encode and decode
+
+One operation encodes and decodes the same English paragraph 10,000 times using an initialized `cl100k_base` encoder. Both libraries process the same text. [Benchmark source](TiktokenSharp.Benchmark/BenchmarkTest.cs)
+
+| Runtime | Library | Mean per 10,000 round trips | Allocated per 10,000 round trips |
+| --- | --- | ---: | ---: |
+| .NET 10.0.14 | SharpToken 2.0.6 | 55.94 ms | 22.13 MiB |
+| .NET 10.0.14 | TiktokenSharp | 37.61 ms | 11.67 MiB |
+| .NET 8.0.33 | SharpToken 2.0.6 | 65.59 ms | 22.13 MiB |
+| .NET 8.0.33 | TiktokenSharp | 39.12 ms | 11.67 MiB |
+
+### Individual operations
+
+Both builds ran the same four benchmarks on .NET 10.0.14 with a live `cl100k_base` encoder. Each row measures one call. The long-piece input is a single run of 8,192 ASCII `a` characters. [Baseline commit 779cf1b](https://github.com/aiqinxuancai/TiktokenSharp/commit/779cf1b0258ee20a8b6fba6bc2492355e740c89f) · [Benchmark source](TiktokenSharp.Benchmark/TokenizerBenchmarks.cs)
+
+| Operation | Baseline mean | Optimized mean | Baseline allocation | Optimized allocation |
+| --- | ---: | ---: | ---: | ---: |
+| Get an already loaded encoding | 46.59 ms | 5.57 µs | 36,340,341 B | 1,328 B |
+| Count one English sentence | 629.6 ns | 589.3 ns | 128 B | 0 B |
+| Count one 8,192-byte piece | 50.96 ms | 1.18 ms | 65,728 B | 0 B |
+| Decode the tokens for 256 copies of the sentence | 24.70 µs | 18.00 µs | 102,560 B | 32,792 B |
+
+### First vocabulary load
+
+A separate fresh-process measurement loaded `o200k_base` from a local vocabulary file on .NET 10.0.14 with tiered compilation disabled. The first `GetEncoding` call allocated 71.51 MiB on the baseline and 20.85 MiB on the optimized build. With the encoder still alive, the increase in managed heap size after a full GC was 17.77 MiB and 9.17 MiB, respectively.
+
+### Reproduce
+
+Run the BenchmarkDotNet workloads from the repository root with the .NET 10 SDK and both .NET 8 and .NET 10 runtimes installed.
 
 ```bash
-dotnet run --project TiktokenSharp.Benchmark/TiktokenSharp.Benchmark.csproj --framework net10.0 -c Release
+dotnet run --project TiktokenSharp.Benchmark -f net10.0 -c Release -- --filter "*" --launchCount 1 --warmupCount 3 --iterationCount 8
 ```
 
-List benchmarks:
+Use `--list flat` to list the benchmarks, or replace `"*"` with `"*TokenizerBenchmarks*"` to run only the individual operations.
 
-```bash
-dotnet run --project TiktokenSharp.Benchmark/TiktokenSharp.Benchmark.csproj --framework net10.0 -c Release -- --list flat
-```
-
-<details> 
-<summary>Code：</summary>
-
-```csharp
-private GptEncoding _sharpToken = GptEncoding.GetEncoding("cl100k_base");
-private TikToken _tikToken = TikToken.GetEncoding("cl100k_base");
-
-private string _kLongText = "King Lear, one of Shakespeare's darkest and most savage plays, tells the story of the foolish and Job-like Lear, who divides his kingdom, as he does his affections, according to vanity and whim. Lear’s failure as a father engulfs himself and his world in turmoil and tragedy.";
-
-[Benchmark]
-public int SharpToken()
-{
-    var sum = 0;
-    for (var i = 0; i < 10000; i++)
-    {
-        var encoded = _sharpToken.Encode(_kLongText);
-        var decoded = _sharpToken.Decode(encoded);
-        sum += decoded.Length;
-    }
-
-    return sum;
-}
-
-[Benchmark]
-public int TiktokenSharp()
-{
-    var sum = 0;
-    for (var i = 0; i < 10000; i++)
-    {
-        var encoded = _tikToken.Encode(_kLongText);
-        var decoded = _tikToken.Decode(encoded);
-        sum += decoded.Length;
-    }
-
-    return sum;
-}
-```
-  
-</details>
-
-
-| Method        | Job       | Runtime   | Mean     | Error    | StdDev   | Median   | Gen0      | Allocated |
-|-------------- |---------- |---------- |---------:|---------:|---------:|---------:|----------:|----------:|
-| SharpToken    | .NET 10.0 | .NET 10.0 | 58.24 ms | 1.159 ms | 2.885 ms | 56.97 ms | 1000.0000 |  22.13 MB |
-| **TiktokenSharp** | .NET 10.0 | .NET 10.0 | **40.85 ms** | 0.806 ms | 0.754 ms | 40.71 ms | 1076.9231 |  **13.28 MB** |
-| SharpToken    | .NET 8.0  | .NET 8.0  | 67.04 ms | 1.281 ms | 1.258 ms | 67.42 ms | 1500.0000 |  22.13 MB |
-| **TiktokenSharp** | .NET 8.0  | .NET 8.0  | 42.97 ms | 0.851 ms | 1.107 ms | 42.63 ms | 1076.9231 |  13.28 MB |
+To reproduce the baseline column, check out `779cf1b` in a separate worktree, copy the same `TokenizerBenchmarks.cs` into its benchmark project, and run the individual operations there.
 
 
 ## Update
+
+### 1.2.2 20261118
+
+* Use `o200k_base` for local token count estimates for GPT-6.x models.
+* Stream vocabulary files and reuse loaded vocabularies and encoders across factory calls. On .NET 10, loading `o200k_base` from disk allocated 20.85 MiB, down from 71.51 MiB.
+* Speed up encoding and counting long pieces on .NET 7 and later. In the .NET 10 benchmark, counting 8,192 consecutive ASCII `a` characters took 1.18 ms, down from 50.96 ms. [Benchmark results](#individual-operations)
+* Encode `ReadOnlySpan<char>` inputs directly and reuse buffers when counting tokens and decoding text to reduce temporary allocations.
 
 ### 1.2.1 20260222
 * Fix cache write failures in read-only environments by falling back from `PBEFileDirectory`/`BaseDirectory` to system `Temp`.
