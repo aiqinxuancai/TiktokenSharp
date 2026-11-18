@@ -201,7 +201,7 @@ namespace TiktokenSharp
                 effectiveDisallowed = disallowedSpecial;
             }
 
-            return _corePBE.EncodeNative(text.ToString(), effectiveAllowed, effectiveDisallowed).Item1;
+            return _corePBE.EncodeNative(text, effectiveAllowed, effectiveDisallowed).Item1;
         }
 
         /// <summary>
